@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Atrium — Content Operations Platform</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app" id="app">
+  <div class="nav-scrim" id="navScrim"></div>
+
+  <aside class="rail" id="rail">
+    <div class="rail-top">
+      <div class="brand-mark" id="brandMark"></div>
+      <div class="brand-word" id="brandWord"></div>
+    </div>
+    <nav class="rail-scroll" id="nav"></nav>
+    <div class="rail-bottom">
+      <button class="user-chip" data-act="profile" id="userChip"></button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn" id="navToggle" data-tip="Toggle sidebar"></button>
+      <div class="crumbs">
+        <span class="dim t-sm" id="crumbSection">Command center</span>
+        <span class="sep t-sm">/</span>
+        <span class="crumb-now" id="crumbNow">Dashboard</span>
+      </div>
+      <div class="topbar-spacer"></div>
+      <div class="clock" id="clock" data-tip="Your device's own date and time">
+        <i class="clock-dot"></i>
+        <span class="clock-day" id="clockDay"></span>
+        <span class="clock-time" id="clockTime"></span>
+      </div>
+      <button class="searchbtn" id="openPalette">
+        <span class="ic-slot" id="searchIcon"></span>
+        <span style="flex:1;text-align:left">Search or jump to…</span>
+        <span class="kbd">⌘K</span>
+      </button>
+      <select class="select" id="periodSel" style="width:138px" data-tip="Reporting period"></select>
+      <button class="icon-btn bordered" id="guideBtn" data-tip="Show or hide the on-screen guide"></button>
+      <button class="icon-btn bordered" id="themeBtn" data-tip="Switch appearance"></button>
+      <button class="icon-btn bordered" id="bellBtn" data-tip="Notifications"></button>
+    </header>
+    <main class="view" id="view" tabindex="-1"></main>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+<div id="tip"></div>
+<div id="layers"></div>
+<script src="app.js"></script>
+</body>
+</html>

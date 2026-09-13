@@ -685,6 +685,8 @@ const scoreBand = s => s>=70?{t:'Excellent',tone:'pos'}:s>=45?{t:'Solid',tone:'i
 
 /* business health */
 function health(){
+  if(!CONTENT.length && !REVENUE.length && !EXPENSES.length && !TASKS.length && !BUDGETS.length)
+    return {checks:[], state:'No data yet', tone:'neutral', pct:null};
   const m=metrics(S.month), checks=[
     {name:'Net margin', ok:m.netMargin>=30, warn:m.netMargin>=18, value:F.pct(m.netMargin), hint:'Target is 30% or better'},
     {name:'Cash runway', ok:m.cash> m.expenses*4, warn:m.cash>m.expenses*2, value:(m.expenses>0?(m.cash/m.expenses).toFixed(1)+' months':'—'), hint:'Cash divided by monthly spend'},
@@ -1356,14 +1358,15 @@ V.dashboard = () => {
     actions:`<span class="badge ${h.tone}"><i class="dot ${h.tone}"></i>${h.state}</span>`,
     body:`<div class="grid g-1-2" style="gap:22px">
       <div>
-        <div class="row" style="gap:12px;margin-bottom:12px">
+        ${h.checks.length ? `<div class="row" style="gap:12px;margin-bottom:12px">
           ${Chart.ring(h.pct,44,`var(--${h.tone})`)}
           <div><div class="w6" style="font-size:14.5px;letter-spacing:-.02em">Business health</div>
           <div class="t-sm dim">${h.checks.filter(c=>c.ok).length} of ${h.checks.length} checks are clear</div></div>
         </div>
         ${h.checks.map(c=>`<div class="row" style="padding:5px 0;border-bottom:1px solid var(--line-2)" data-tip="${esc(c.hint)}">
           <i class="dot ${c.ok?'pos':c.warn?'warn':'neg'}"></i><span class="t-sm">${esc(c.name)}</span>
-          <span class="t-sm num w5" style="margin-left:auto">${esc(c.value)}</span></div>`).join('')}
+          <span class="t-sm num w5" style="margin-left:auto">${esc(c.value)}</span></div>`).join('')}`
+        : UI.empty('No data yet','These checks read real content, tasks, revenue and expenses — once something is entered, this panel starts scoring it.')}
       </div>
       <div>${insights().map(UI.insightRow).join('')}</div>
     </div>`});

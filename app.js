@@ -72,7 +72,8 @@ const P = {
   layers:'<path d="M12 3 2.5 8 12 13l9.5-5z"/><path d="M2.5 15.5 12 20.5l9.5-5"/>',
   refresh:'<path d="M20.5 11.5A8.5 8.5 0 0 0 6 6.2L3.5 8.5"/><path d="M3.5 12.5A8.5 8.5 0 0 0 18 17.8l2.5-2.3"/><path d="M3.5 4.5v4h4M20.5 19.5v-4h-4"/>',
   pin:'<path d="M12 21s6.5-6.2 6.5-11a6.5 6.5 0 1 0-13 0C5.5 14.8 12 21 12 21z"/><circle cx="12" cy="10" r="2.3"/>',
-  lock:'<rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>'
+  lock:'<rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>',
+  sheet:'<rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M3.5 9.5h17M3.5 15h17M9.5 3.5v17M15 3.5v17"/>'
 };
 const icon = (n,s=15,cls='') => '<svg class="ic '+cls+'" width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'+(P[n]||'')+'</svg>';
 
@@ -1325,6 +1326,7 @@ const pageHead=(title,sub,actions='')=>`<div class="page-head">
   <div style="min-width:0"><h1 class="page-title">${esc(title)}</h1>${sub?`<p class="page-sub">${sub}</p>`:''}</div>
   ${actions?`<div class="page-actions">${actions}</div>`:''}</div>`+guideBlock();
 const btnExport=(what)=>`<button class="btn" data-export="${what}">${icon('download',14)} Export</button>`;
+const btnExportXL=(what)=>`<button class="icon-btn bordered" data-export="${what}" data-tip="Download as spreadsheet" style="color:#1D7A46">${icon('sheet',16)}</button>`;
 const btnPrint=`<button class="btn" data-act="print">${icon('print',14)} PDF</button>`;
 
 const V = {};
@@ -2362,7 +2364,7 @@ V.revenue = () => {
   const statusTone=s=>({Paid:'pos',Invoiced:'info','Partially paid':'warn',Overdue:'neg',Pending:'neutral',Cancelled:'neutral'})[s]||'neutral';
   return pageHead('Revenue',
     `${F.peso(m.revenue)} recognised in ${MONTHS[S.month]}, ${F.peso(m.ar)} still outstanding across ${REVENUE.filter(r=>r.status!=='Paid').length} invoices.`,
-    `${btnExport('revenue')}<button class="btn btn-primary" data-act="new-revenue">${icon('plus',14)} Record revenue</button>`)
+    `${btnExportXL('revenue')}<button class="btn btn-primary" data-act="new-revenue">${icon('plus',14)} Record revenue</button>`)
   + `<div class="grid g-5" style="margin-bottom:14px">
       ${UI.kpi({label:MONTHS[S.month]+' revenue',value:F.peso(m.revenue),delta:m.dRevenue,spark:Chart.spark(SERIES.revenue.slice(0,S.month+1),'var(--accent)')})}
       ${UI.kpi({label:'Year to date',value:F.peso(YTD().revenue),sub:'nine months of trading'})}
@@ -2411,7 +2413,7 @@ V.expenses = () => {
   const m=metrics(S.month);
   return pageHead('Expenses',
     `${F.peso(m.expenses)} spent in ${MONTHS[S.month]} — ${F.peso(m.direct)} directly on content, ${F.peso(m.opex)} on running the studio.`,
-    `${btnExport('expenses')}<button class="btn btn-primary" data-act="new-expense">${icon('plus',14)} Record expense</button>`)
+    `${btnExportXL('expenses')}<button class="btn btn-primary" data-act="new-expense">${icon('plus',14)} Record expense</button>`)
   + `<div class="grid g-5" style="margin-bottom:14px">
       ${UI.kpi({label:MONTHS[S.month]+' spend',value:F.peso(m.expenses),delta:m.dExpenses,deltaOpts:{invert:true},
         spark:Chart.spark(SERIES.expenses.slice(0,S.month+1),'var(--neg)')})}
@@ -2460,7 +2462,7 @@ V.costs = () => {
   const byType=groupStats('type');
   return pageHead('Production costs',
     `Every peso spent making content, attached to the piece it belongs to. Average cost per published video is ${F.peso(sum(PUBLISHED,c=>c.cost)/PUBLISHED.length)}.`,
-    `${btnExport('costs')}<button class="btn btn-primary" data-act="new-expense">${icon('plus',14)} Log a cost</button>`)
+    `${btnExportXL('costs')}<button class="btn btn-primary" data-act="new-expense">${icon('plus',14)} Log a cost</button>`)
   + `<div class="grid g-4" style="margin-bottom:14px">
       ${UI.kpi({label:'Total production cost',value:F.peso(sum(CONTENT,c=>c.cost)),sub:'all content to date'})}
       ${UI.kpi({label:'Cost per published video',value:F.peso(sum(PUBLISHED,c=>c.cost)/PUBLISHED.length),delta:m.dCost,deltaOpts:{invert:true},
@@ -2507,7 +2509,7 @@ V.budget = () => {
   return pageHead('Budget',
     risky.length? `${risky.length} ${risky.length>1?'budgets are':'budget is'} above 90% used. ${risky[0].name} has ${F.peso(risky[0].remaining)} left.`
       : 'Every budget is inside its limit.',
-    `${btnExport('budget')}<button class="btn btn-primary" data-act="new-budget">${icon('plus',14)} Create budget</button>`)
+    `${btnExportXL('budget')}<button class="btn btn-primary" data-act="new-budget">${icon('plus',14)} Create budget</button>`)
   + `<div class="grid g-4" style="margin-bottom:14px">
       ${UI.kpi({label:'Total budgeted',value:F.peso(tot.budget),sub:BUDGETS.length+' budget lines'})}
       ${UI.kpi({label:'Actual spend',value:F.peso(tot.actual),sub:F.pct(tot.actual/tot.budget*100)+' used'})}
@@ -2568,7 +2570,7 @@ V.profitability = () => {
     cmps.length && types.length
       ? `Where the money is actually made. ${esc(cmps[0].name)} produced ${F.peso(cmps[0].profit)} of profit; ${types[0].key.toLowerCase()} is the most profitable format.`
       : 'Where the money is actually made. Once content has both a cost and some income against it, the rankings build themselves here.',
-    btnExport('profitability'))
+    btnExportXL('profitability'))
   + `<div class="grid g-6" style="margin-bottom:14px">
       ${UI.kpi({label:'Revenue',value:F.peso(m.revenue),small:true,delta:m.dRevenue})}
       ${UI.kpi({label:'Direct cost',value:F.peso(m.direct),small:true,sub:F.pct(m.direct/m.revenue*100,0)+' of revenue'})}
@@ -2624,7 +2626,7 @@ V.financials = () => {
     <span class="pl-l">${esc(l)}</span><span class="pl-v" style="color:${o.neg?'var(--neg)':o.pos?'var(--pos)':''}">${v}</span></div>`;
   const head=pageHead('Financial reports',
     `Profit and loss, cash movement and what is owed — for ${MONTHS[S.month]} ${YEAR()} and the year to date.`,
-    `${btnPrint}${btnExport('financials')}`) + UI.tabs('fin',['Profit and loss','Cash','Receivables and payables'],tab);
+    `${btnPrint}${btnExportXL('financials')}`) + UI.tabs('fin',['Profit and loss','Cash','Receivables and payables'],tab);
 
   if(tab==='Profit and loss') return head + `<div class="grid g-2">
     ${UI.card({title:'Profit and loss',note:MONTHS[S.month]+' '+YEAR(),body:

@@ -6,6 +6,13 @@
 "use strict";
 
 /* ============================================================
+   0. SUPABASE (persistence)
+   ============================================================ */
+const SUPABASE_URL = 'https://iuoomlxoxmaakrftchez.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1b29tbHhveG1hYWtyZnRjaGV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxOTcyODAsImV4cCI6MjEwNDc3MzI4MH0.oHBxOHQ-ZRsQ3fPBBLpXziOrExBstprP2LVQHBKkxvE';
+const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+/* ============================================================
    1. ICONS
    ============================================================ */
 const P = {
@@ -254,6 +261,83 @@ CONTENT.forEach(c=>{
 /* ---- tasks ---- */
 const TASKS = [].map(r=>({id:r[0],title:r[1],content:r[2],assignee:r[3],due:r[4],status:r[5],priority:r[6],dept:r[7],hours:r[8],
   overdue: r[5]!=='Done' && daysFrom(r[4])<0}));
+
+/* ============================================================
+   3b. SUPABASE HYDRATION & PERSISTENCE
+   Content and team are the two record types with a working
+   create form — they load from and write through to Supabase.
+   ============================================================ */
+function buildStages(status, owner, editor){
+  const idx = STAGES.indexOf(status);
+  const done = Math.max(1, Math.min(STAGE_FLOW.length, Math.round((idx+1)/STAGES.length*STAGE_FLOW.length)));
+  return STAGE_FLOW.map((s,i)=>({
+    name:s, owner: i<3 ? owner : (i<5 ? editor : owner),
+    state: i<done-1 ? 'Done' : (i===done-1 ? 'In progress' : 'Not started'),
+    hours:0, days:0
+  }));
+}
+function hydrateContentRow(r){
+  const c = {id:r.id, title:r.title, type:r.type, category:r.category, platform:r.platform, campaign:r.campaign,
+    status:r.status, owner:r.owner, editor:r.editor, priority:r.priority, deadline:r.deadline,
+    estCost:+r.est_cost||0, cost:+r.cost||0, views:+r.views||0, er:+r.er||0, followers:+r.followers||0,
+    revenue:+r.revenue||0, published:r.published||'', watch:+r.watch||0, completion:+r.completion||0, costLines:[]};
+  c.profit = c.revenue - c.cost;
+  c.roi = c.cost>0 ? (c.revenue-c.cost)/c.cost*100 : 0;
+  c.engagements = Math.round(c.views * c.er/100);
+  c.isPublished = c.status==='Published';
+  c.stageIndex = STAGES.indexOf(c.status);
+  c.stages = buildStages(c.status, c.owner, c.editor);
+  return c;
+}
+function hydrateTeamRow(r){
+  const cap=+r.capacity||40, alloc=+r.allocated||0;
+  return {id:r.id, name:r.name, role:r.role, dept:r.dept, color:r.color||'#1D1D1F',
+    done:0, onTime:100, turn:0, active:0, capacity:cap, allocated:alloc,
+    joined:r.joined||'', initials:F.initials(r.name), email:r.email||'', access:r.access||'creator',
+    status:r.status||'Active', lastActive:r.last_active||'', load: cap?Math.round(alloc/cap*100):0};
+}
+async function loadFromSupabase(){
+  if(!sb) return;
+  try{
+    const [{data:contentRows,error:e1}, {data:teamRows,error:e2}, {data:activityRows,error:e3}] = await Promise.all([
+      sb.from('content').select('*').order('created_at',{ascending:true}),
+      sb.from('team').select('*').order('created_at',{ascending:true}),
+      sb.from('activity').select('*').order('created_at',{ascending:false}).limit(200)
+    ]);
+    if(e1||e2||e3){ console.error('Supabase load error', e1||e2||e3); return; }
+    if(teamRows && teamRows.length){
+      TEAM.length=0; Object.keys(MEM).forEach(k=>delete MEM[k]);
+      teamRows.forEach(r=>{ const t=hydrateTeamRow(r); TEAM.push(t); MEM[t.id]=t; });
+    }
+    if(contentRows){
+      CONTENT.length=0; Object.keys(CT).forEach(k=>delete CT[k]);
+      contentRows.forEach(r=>{ const c=hydrateContentRow(r); CONTENT.push(c); CT[c.id]=c; });
+      PUBLISHED.length=0; PUBLISHED.push(...CONTENT.filter(c=>c.isPublished));
+    }
+    if(activityRows){
+      ACTIVITY.length=0;
+      activityRows.forEach(r=>ACTIVITY.push({id:r.id,date:r.date,time:r.time,who:r.who,what:r.what,ref:r.ref,label:r.label,type:r.type}));
+    }
+    recomputeSeries();
+  }catch(err){ console.error('Supabase load failed', err); }
+}
+function logActivity(entry){
+  ACTIVITY.unshift(entry);
+  if(sb) sb.from('activity').insert(entry).then(({error})=>{ if(error) console.error('activity insert failed',error); });
+}
+function persistContent(c){
+  if(!sb) return;
+  sb.from('content').upsert({id:c.id,title:c.title,type:c.type,category:c.category,platform:c.platform,
+    campaign:c.campaign,status:c.status,owner:c.owner,editor:c.editor,priority:c.priority,deadline:c.deadline||null,
+    est_cost:c.estCost,cost:c.cost,views:c.views,er:c.er,followers:c.followers,revenue:c.revenue,
+    published:c.published||null,watch:c.watch,completion:c.completion}).then(({error})=>{ if(error) console.error('content save failed',error); });
+}
+function persistTeam(t){
+  if(!sb) return;
+  sb.from('team').upsert({id:t.id,name:t.name,role:t.role,dept:t.dept,color:t.color,capacity:t.capacity,
+    allocated:t.allocated,joined:t.joined||null,email:t.email,access:t.access,status:t.status,last_active:t.lastActive})
+    .then(({error})=>{ if(error) console.error('team save failed',error); });
+}
 
 /* ---- revenue ledger ---- */
 const REVENUE = [].map((r,i)=>({id:'REV-'+String(i+1).padStart(3,'0'),date:r[0],source:r[1],client:r[2],campaign:r[3],content:r[4],
@@ -2852,7 +2936,7 @@ function go(id){
   try{ if(location.hash!=='#/'+id) history.replaceState(null,'','#/'+id); }catch(e){}
   $('#view').scrollTop=0; render();
 }
-function boot(){
+async function boot(){
   let hash='';
   try{ hash=(location.hash||'').replace('#/',''); }catch(e){}
   S.view = V[hash]? hash : 'dashboard';
@@ -2865,6 +2949,8 @@ function boot(){
   $('#themeBtn').innerHTML=icon(S.theme==='dark'?'sun':'moon',16);
   $('#bellBtn').innerHTML=icon('bell',16)+(NOTIFS.some(n=>!n.read)?'<i class="dot-badge"></i>':'');
   $('#navToggle').innerHTML=icon('menu',16);
+  await loadFromSupabase();
+  paintUser();
   render();
 }
 
@@ -2967,7 +3053,8 @@ function doAction(act,el){
     case 'toggle-user': {
       const t=MEM[el.dataset.id]; if(!t) break;
       t.status = t.status==='Disabled' ? 'Active' : 'Disabled';
-      ACTIVITY.unshift({id:'LOG-s'+Math.random(), date:new Date().toISOString().slice(0,10),
+      persistTeam(t);
+      logActivity({id:'LOG-s'+Math.random(), date:new Date().toISOString().slice(0,10),
         time:new Date().toTimeString().slice(0,5), who:ME.id,
         what:(t.status==='Disabled'?'disabled':'re-enabled')+' the account of', ref:t.id, label:t.name, type:'Access'});
       render(); toast(t.name+' is now '+t.status.toLowerCase(), t.status==='Disabled'?'lock':'check'); break; }
@@ -3044,8 +3131,8 @@ function saveUser(){
     access: $('#iuAccess')?$('#iuAccess').value:'creator',
     status:'Invited', lastActive:'',
     load: 0};
-  TEAM.push(t); MEM[id]=t;
-  ACTIVITY.unshift({id:'LOG-u'+id, date:new Date().toISOString().slice(0,10),
+  TEAM.push(t); MEM[id]=t; persistTeam(t);
+  logActivity({id:'LOG-u'+id, date:new Date().toISOString().slice(0,10),
     time:new Date().toTimeString().slice(0,5), who:ME.id, what:'invited',
     ref:id, label:name+' as '+roleName(t.access), type:'Access'});
   closeLayers(); go('users');
@@ -3087,8 +3174,8 @@ function saveContent(){
     views:0,er:0,followers:0,revenue:0,published:'',watch:0,completion:0,
     costLines:[],profit:0,roi:0,engagements:0,isPublished:false,stageIndex:0};
   c.stages=STAGE_FLOW.map((s,i)=>({name:s,owner:i<3?c.owner:c.editor,state:i===0?'In progress':'Not started',hours:0,days:0}));
-  CONTENT.push(c); CT[id]=c;
-  ACTIVITY.unshift({id:'LOG-n'+CONTENT.length,date:iso(TODAY),time:new Date().toTimeString().slice(0,5),
+  CONTENT.push(c); CT[id]=c; persistContent(c);
+  logActivity({id:'LOG-n'+CONTENT.length,date:iso(TODAY),time:new Date().toTimeString().slice(0,5),
     who:ME.id,what:'created',ref:id,label:title,type:'Content'});
   closeLayers(); go('planner'); toast('Created '+id+' — '+title,'plus');
 }
@@ -3096,7 +3183,9 @@ function advanceStage(id){
   const c=CT[id], i=STAGES.indexOf(c.status);
   if(i<0||i>=STAGES.length-1){ toast('Already published','checkC'); return; }
   c.status=STAGES[i+1]; c.stageIndex=i+1; c.isPublished=c.status==='Published';
-  ACTIVITY.unshift({id:'LOG-m'+Math.random(),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),
+  if(c.isPublished && !c.published) c.published=iso(TODAY);
+  persistContent(c);
+  logActivity({id:'LOG-m'+Math.random(),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),
     who:ME.id,what:'moved to '+c.status,ref:c.id,label:c.title,type:'Status'});
   openDetail('content',id); render(); toast(c.title+' moved to '+c.status,'chevR');
 }
@@ -3120,7 +3209,8 @@ document.addEventListener('drop',e=>{
   if(c && c.status!==to){
     const from=c.status; c.status=to; c.stageIndex=STAGES.indexOf(to); c.isPublished=(to==='Published');
     if(to==='Published'&&!c.published) c.published=iso(TODAY);
-    ACTIVITY.unshift({id:'LOG-d'+Math.random(),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),
+    persistContent(c);
+    logActivity({id:'LOG-d'+Math.random(),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),
       who:ME.id,what:`moved ${from} → ${to}`,ref:c.id,label:c.title,type:'Status'});
     toast(`${c.title} moved to ${to}`,'check');
   }
@@ -3365,4 +3455,4 @@ $('#view').innerHTML=`<div class="view-inner">
   <div class="sk" style="height:220px;margin-bottom:14px"></div>
   <div class="grid g-2">${Array.from({length:2}).map(()=>'<div class="sk" style="height:280px"></div>').join('')}</div>
 </div>`;
-setTimeout(()=>{ boot(); if(S._fresh) setTimeout(welcome,420); },220);
+setTimeout(async()=>{ await boot(); if(S._fresh) setTimeout(welcome,420); },220);

@@ -2958,9 +2958,10 @@ function contentDrawer(c){
   let body='';
   if(tab==='Overview') body = UI.dl([
     ['Content ID',`<span class="mono">${c.id}</span>`],['Type',esc(c.type)],['Category',esc(c.category)],
-    ['Platform',`<span class="row"><i class="dot" style="background:${PLAT[c.platform].color}"></i>${PLAT[c.platform].name}</span>`],
-    ['Campaign',`<span style="cursor:pointer;border-bottom:1px solid var(--line-strong)" data-open="campaign:${c.campaign}">${esc(cmpName(c.campaign))}</span>`],
-    ['Objective',esc(CMP[c.campaign].objective)],
+    ['Platform',(()=>{ const p=PLAT[c.platform]||{color:'var(--ink-4)',name:'—'};
+      return `<span class="row"><i class="dot" style="background:${p.color}"></i>${p.name}</span>`; })()],
+    ['Campaign',c.campaign?`<span style="cursor:pointer;border-bottom:1px solid var(--line-strong)" data-open="campaign:${c.campaign}">${esc(cmpName(c.campaign))}</span>`:'<span class="faint">—</span>'],
+    ['Objective',esc((CMP[c.campaign]||{objective:'—'}).objective)],
     ['Target audience','Home cooks aged 25–44 in Southern Luzon'],
     ['Content pillar',esc(c.category)],
     ['Hook',`<span class="w5">“${esc(hook)}”</span>`],

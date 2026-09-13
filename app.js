@@ -3833,17 +3833,39 @@ async function doLogin(){
 }
 function doLogout(){
   if(!sb) return;
+  try{ localStorage.removeItem(IDLE_KEY); }catch(e){}
   sb.auth.signOut().then(()=>location.reload());
 }
 function showApp(){
   $('#authScreen').hidden=true;
   $('#app').style.display='';
 }
+/* ---- auto-lock after 30 minutes away, tab open or closed ---- */
+const IDLE_LIMIT = 30*60*1000;
+const IDLE_KEY = 'atrium_last_active';
+function touchActivity(){ try{ localStorage.setItem(IDLE_KEY, String(Date.now())); }catch(e){} }
+function idleExpired(){
+  try{
+    const last = +localStorage.getItem(IDLE_KEY);
+    return last ? (Date.now()-last) > IDLE_LIMIT : false;
+  }catch(e){ return false; }
+}
+let _idleTouchQueued=false;
+function startIdleWatch(){
+  const onActivity=()=>{ if(_idleTouchQueued) return; _idleTouchQueued=true;
+    setTimeout(()=>{ touchActivity(); _idleTouchQueued=false; },5000); };
+  ['click','keydown','mousemove','scroll','touchstart'].forEach(ev=>document.addEventListener(ev,onActivity,{passive:true}));
+  touchActivity();
+  setInterval(()=>{ if(idleExpired()) doLogout(); }, 30000);
+}
 async function startApp(){
   if(!sb){ await boot(); if(S._fresh) setTimeout(welcome,420); return; }
+  if(idleExpired()){ try{ await sb.auth.signOut(); }catch(e){} renderAuthScreen('Locked after 30 minutes away — please sign in again.'); return; }
   const {data:{session}} = await sb.auth.getSession();
   if(!session){ renderAuthScreen(); return; }
   showApp();
+  touchActivity();
+  startIdleWatch();
   await boot();
   if(S._fresh) setTimeout(welcome,420);
 }

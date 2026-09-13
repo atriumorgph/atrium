@@ -463,6 +463,109 @@ function syncPublishingForContent(c){
   persistPublishing(p);
 }
 
+/* ============================================================
+   3c. DELETE — owner-only, everywhere
+   ============================================================ */
+function canDelete(){ return ME.access==='owner'; }
+function removeById(arr,id){ const i=arr.findIndex(x=>x.id===id); if(i>-1) arr.splice(i,1); }
+async function deleteRow(table,id){
+  if(!sb) return true;
+  const {error} = await sb.from(table).delete().eq('id',id);
+  if(error){ console.error('delete failed',table,error); toast('Delete failed — '+error.message,'alert'); return false; }
+  return true;
+}
+async function deleteContent(id){
+  if(!canDelete()) return;
+  const c=CT[id]; if(!c) return;
+  if(!confirm('Delete "'+c.title+'" permanently? This cannot be undone.')) return;
+  if(!await deleteRow('content',id)) return;
+  removeById(CONTENT,id); delete CT[id]; removeById(PUBLISHED,id); removeById(PUBLISHING,id);
+  logActivity({id:newId('LOG'),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),who:ME.id,what:'deleted content',ref:id,label:c.title,type:'Content'});
+  closeLayers(); go('planner'); toast('Deleted — '+c.title,'close');
+}
+async function deleteCampaign(id){
+  if(!canDelete()) return;
+  const c=CMP[id]; if(!c) return;
+  if(!confirm('Delete campaign "'+c.name+'" permanently? Content and ledger entries pointing to it will stay, just unlinked.')) return;
+  if(!await deleteRow('campaigns',id)) return;
+  removeById(CAMPAIGNS,id); delete CMP[id];
+  logActivity({id:newId('LOG'),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),who:ME.id,what:'deleted campaign',ref:id,label:c.name,type:'Campaign'});
+  closeLayers(); go('campaigns'); toast('Deleted — '+c.name,'close');
+}
+async function deleteTask(id){
+  if(!canDelete()) return;
+  const t=TASKS.find(x=>x.id===id); if(!t) return;
+  if(!confirm('Delete task "'+t.title+'"?')) return;
+  if(!await deleteRow('tasks',id)) return;
+  removeById(TASKS,id);
+  logActivity({id:newId('LOG'),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),who:ME.id,what:'deleted task',ref:id,label:t.title,type:'Task'});
+  render(); toast('Deleted — '+t.title,'close');
+}
+async function deleteRevenue(id){
+  if(!canDelete()) return;
+  const r=REVENUE.find(x=>x.id===id); if(!r) return;
+  if(!confirm('Delete this revenue entry ('+F.peso(r.amount)+')?')) return;
+  if(!await deleteRow('revenue',id)) return;
+  removeById(REVENUE,id);
+  logActivity({id:newId('LOG'),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),who:ME.id,what:'deleted revenue entry',ref:id,label:r.client+' — '+F.peso(r.amount),type:'Revenue'});
+  closeLayers(); render(); toast('Deleted revenue entry','close');
+}
+async function deleteExpense(id){
+  if(!canDelete()) return;
+  const e=EXPENSES.find(x=>x.id===id); if(!e) return;
+  if(!confirm('Delete this expense ('+F.peso(e.amount)+')?')) return;
+  if(!await deleteRow('expenses',id)) return;
+  removeById(EXPENSES,id);
+  logActivity({id:newId('LOG'),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),who:ME.id,what:'deleted expense',ref:id,label:e.description,type:'Expense'});
+  closeLayers(); render(); toast('Deleted expense','close');
+}
+async function deleteBudget(id){
+  if(!canDelete()) return;
+  const b=BUDGETS.find(x=>x.id===id); if(!b) return;
+  if(!confirm('Delete budget "'+b.name+'"?')) return;
+  if(!await deleteRow('budgets',id)) return;
+  removeById(BUDGETS,id);
+  logActivity({id:newId('LOG'),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),who:ME.id,what:'deleted budget',ref:id,label:b.name,type:'Budget'});
+  render(); toast('Deleted — '+b.name,'close');
+}
+async function deleteGoal(id){
+  if(!canDelete()) return;
+  const g=GOALS.find(x=>x.id===id); if(!g) return;
+  if(!confirm('Delete target "'+g.name+'"?')) return;
+  if(!await deleteRow('goals',id)) return;
+  removeById(GOALS,id);
+  logActivity({id:newId('LOG'),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),who:ME.id,what:'deleted target',ref:id,label:g.name,type:'Goal'});
+  render(); toast('Deleted — '+g.name,'close');
+}
+async function deleteAsset(id){
+  if(!canDelete()) return;
+  const a=ASSETS.find(x=>x.id===id); if(!a) return;
+  if(!confirm('Delete asset "'+a.name+'"?')) return;
+  if(!await deleteRow('assets',id)) return;
+  removeById(ASSETS,id);
+  logActivity({id:newId('LOG'),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),who:ME.id,what:'deleted asset',ref:id,label:a.name,type:'Asset'});
+  closeLayers(); go('library'); toast('Deleted — '+a.name,'close');
+}
+async function deletePublishing(id){
+  if(!canDelete()) return;
+  const p=PUBLISHING.find(x=>x.id===id); if(!p) return;
+  if(!confirm('Delete this publishing record? This does not un-publish the content itself.')) return;
+  if(!await deleteRow('publishing',id)) return;
+  removeById(PUBLISHING,id);
+  logActivity({id:newId('LOG'),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),who:ME.id,what:'deleted publishing record',ref:id,label:p.content,type:'Publishing'});
+  render(); toast('Deleted publishing record','close');
+}
+async function deleteMember(id){
+  if(!canDelete()) return;
+  const t=MEM[id]; if(!t) return;
+  if(t.id===ME.id){ toast('You cannot delete your own account','lock'); return; }
+  if(!confirm('Delete '+t.name+'’s account permanently? They will need a new invite to come back.')) return;
+  if(!await deleteRow('team',id)) return;
+  removeById(TEAM,id); delete MEM[id];
+  logActivity({id:newId('LOG'),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),who:ME.id,what:'deleted the account of',ref:id,label:t.name,type:'Access'});
+  render(); toast('Deleted — '+t.name,'close');
+}
+
 /* ---- revenue ledger ---- */
 const REVENUE = [].map((r,i)=>({id:'REV-'+String(i+1).padStart(3,'0'),date:r[0],source:r[1],client:r[2],campaign:r[3],content:r[4],
   platform:r[5],amount:r[6],status:r[7],invoice:r[8],month:r[0].slice(0,7)}));
@@ -1743,7 +1846,9 @@ V.publishing = () => {
       {k:'date',label:'Date',align:'r',cell:r=>`<div>${F.date(r.date)}</div><div class="cell-sub">${r.time}</div>`},
       {k:'hashtags',label:'Hashtags',cell:r=>`<span class="t-xs dim truncate">${esc(r.hashtags)}</span>`},
       {k:'status',label:'Status',cell:r=>UI.badge(r.status, r.status==='Published'?'pos':r.status==='Scheduled'?'violet':r.status==='Failed'?'neg':'neutral',true)},
-      {k:'url',label:'Link',align:'r',sortable:false,cell:r=>r.url?`<span class="row" style="justify-content:flex-end;color:var(--accent)">${icon('ext',13)}</span>`:'<span class="faint">—</span>'}
+      {k:'url',label:'Link',align:'r',sortable:false,cell:r=>r.url?`<span class="row" style="justify-content:flex-end;color:var(--accent)">${icon('ext',13)}</span>`:'<span class="faint">—</span>'},
+      ...(canDelete()?[{k:'x',label:'',align:'r',sortable:false,cell:r=>
+        `<button class="btn btn-ghost btn-sm" style="color:var(--neg)" data-act="delete-publishing" data-id="${r.id}">Delete</button>`}]:[])
     ], rows})});
 };
 
@@ -2119,7 +2224,9 @@ V.tasks = () => {
       {k:'status',label:'Status',cell:r=>UI.badge(r.status,r.status==='Done'?'pos':r.status==='Blocked'?'neg':r.status==='In progress'?'info':'neutral',true)},
       {k:'hours',label:'Estimate',align:'r',cell:r=>F.dur(r.hours)},
       {k:'due',label:'Due',align:'r',cell:r=>`<div>${F.date(r.due)}</div>
-        <div class="cell-sub" style="color:${r.overdue?'var(--neg)':''}">${r.status==='Done'?'done':relDays(r.due)}</div>`}
+        <div class="cell-sub" style="color:${r.overdue?'var(--neg)':''}">${r.status==='Done'?'done':relDays(r.due)}</div>`},
+      ...(canDelete()?[{k:'x',label:'',align:'r',sortable:false,cell:r=>
+        `<button class="btn btn-ghost btn-sm" style="color:var(--neg)" data-act="delete-task" data-id="${r.id}">Delete</button>`}]:[])
     ],rows,open:r=>r.content?'content:'+r.content:'',
       emptyTitle:'No tasks here',emptyText:'Everything in this view is clear. Pick another tab to see the rest.'})});
 };
@@ -2216,6 +2323,7 @@ V.goals = () => {
         ${UI.meter(Math.min(g.pct,100),tone)}
         <div class="t-xs dim" style="margin-top:7px">${done? 'Target met. Holding this pace clears the quarter.'
           : `${fmt(g,Math.abs(g.variance))} to go — roughly ${Math.ceil(Math.abs(g.variance)/(g.actual/11))} days at the current run rate.`}</div>
+        ${canDelete()?`<button class="btn btn-ghost btn-sm" style="color:var(--neg);margin-top:10px" data-act="delete-goal" data-id="${g.id}">Delete</button>`:''}
       </div></article>`;}).join('')}</div>`;
 };
 
@@ -2415,9 +2523,11 @@ V.budget = () => {
         {k:'remaining',label:'Remaining',align:'r',cell:r=>`<span style="color:${r.remaining<0?'var(--neg)':''}">${F.peso(r.remaining)}</span>`},
         {k:'variance',label:'Variance',align:'r',sortVal:r=>r.remaining,cell:r=>`<span class="w5" style="color:${r.remaining<0?'var(--neg)':'var(--pos)'}">${r.remaining>=0?'under':'over'} by ${F.peso(Math.abs(r.remaining))}</span>`},
         {k:'util',label:'Utilisation',align:'r',cell:r=>`<span class="row" style="justify-content:flex-end;gap:8px">
-          <span class="num w5">${F.pct(r.util)}</span><span style="width:60px">${UI.meter(r.util,r.util>=95?'neg':r.util>=85?'warn':'pos')}</span></span>`}
+          <span class="num w5">${F.pct(r.util)}</span><span style="width:60px">${UI.meter(r.util,r.util>=95?'neg':r.util>=85?'warn':'pos')}</span></span>`},
+        ...(canDelete()?[{k:'x',label:'',align:'r',sortable:false,cell:r=>
+          `<button class="btn btn-ghost btn-sm" style="color:var(--neg)" data-act="delete-budget" data-id="${r.id}">Delete</button>`}]:[])
       ],rows,foot:`<td colspan="2">Totals</td><td class="r">${F.peso(tot.budget)}</td><td class="r">${F.peso(tot.actual)}</td>
-        <td class="r">${F.peso(tot.budget-tot.actual)}</td><td></td><td class="r">${F.pct(tot.actual/tot.budget*100)}</td>`})})}`;
+        <td class="r">${F.peso(tot.budget-tot.actual)}</td><td></td><td class="r">${F.pct(tot.actual/tot.budget*100)}</td>${canDelete()?'<td></td>':''}`})})}`;
 };
 
 /* ============================================================
@@ -2699,7 +2809,10 @@ V.users = () => {
           {k:'status',label:'Status',cell:t=>UI.badge(t.status, t.status==='Active'?'pos':t.status==='Invited'?'warn':'neutral',true)},
           {k:'lastActive',label:'Last active',cell:t=>`<span class="t-xs dim">${t.lastActive==='now'?'right now':(t.lastActive||'never')}</span>`},
           {k:'x',label:'',align:'r',sort:false,cell:t=> t.id===ME.id ? ''
-            : `<button class="btn btn-ghost btn-sm" data-act="toggle-user" data-id="${t.id}">${t.status==='Disabled'?'Enable':'Disable'}</button>`}
+            : `<span class="row" style="gap:6px;justify-content:flex-end">
+                <button class="btn btn-ghost btn-sm" data-act="toggle-user" data-id="${t.id}">${t.status==='Disabled'?'Enable':'Disable'}</button>
+                ${canDelete()?`<button class="btn btn-ghost btn-sm" style="color:var(--neg)" data-act="delete-member" data-id="${t.id}">Delete</button>`:''}
+              </span>`}
         ],rows})})
       + UI.card({cls:'mt-l',title:'A note on how this works today',body:
           `<div class="note warn">These roles are defined and stored, but nothing is <b>enforced</b> yet —
@@ -2962,6 +3075,7 @@ function contentDrawer(c){
     body:tabsBar+body,
     foot:`<button class="btn" data-act="advance" data-id="${c.id}">${icon('chevR',14)} Move to next stage</button>
       <button class="btn" data-act="assign" data-id="${c.id}">Reassign</button>
+      ${canDelete()?`<button class="btn btn-ghost" style="color:var(--neg)" data-act="delete-content" data-id="${c.id}">Delete</button>`:''}
       <span class="t-xs faint" style="margin-left:auto">Owner ${esc(memName(c.owner))}</span>`});
 }
 
@@ -3024,6 +3138,7 @@ function campaignDrawer(c0){
         <div class="row" style="padding:7px 0;border-bottom:1px solid var(--line-2)"><span class="t-sm truncate">${esc(e.description)}</span>
         <span class="num w5 t-sm" style="margin-left:auto">${F.peso(e.amount)}</span></div>`).join('')}`:''}`,
     foot:`<button class="btn" data-go="campaigns">All campaigns</button>
+      ${canDelete()?`<button class="btn btn-ghost" style="color:var(--neg)" data-act="delete-campaign" data-id="${c.id}">Delete</button>`:''}
       <span class="t-xs faint" style="margin-left:auto">${F.pct(c.roi,0)} return on spend</span>`});
 }
 
@@ -3056,7 +3171,8 @@ function txnDrawer(kind,r){
         ['Content',r.content?`<span style="cursor:pointer;border-bottom:1px solid var(--line-strong)" data-open="content:${r.content}">${esc(CT[r.content].title)}</span>`:'—'],
         ['Platform',PLAT[r.platform].name],['Payment status',r.status],
         ['Notes','Net 30 terms. Payment confirmed against the studio account.']])}`,
-    foot:`<button class="btn btn-primary" data-act="mark-paid">Mark as paid</button><button class="btn">Send reminder</button>`});
+    foot:`<button class="btn btn-primary" data-act="mark-paid">Mark as paid</button><button class="btn">Send reminder</button>
+      ${canDelete()?`<button class="btn btn-ghost" style="color:var(--neg);margin-left:auto" data-act="delete-revenue" data-id="${r.id}">Delete</button>`:''}`});
   else openDrawer({eyebrow:'Expense · '+r.id, title:r.description,
     sub:`${esc(r.vendor)} <span class="dim">·</span> ${F.dateFull(r.date)}`,
     body:`<div class="kpi" style="margin-bottom:16px"><div class="kpi-label">Amount</div>
@@ -3069,7 +3185,8 @@ function txnDrawer(kind,r){
         ['Content',r.content?`<span style="cursor:pointer;border-bottom:1px solid var(--line-strong)" data-open="content:${r.content}">${esc(CT[r.content].title)}</span>`:'—'],
         ['Receipt',`<span class="row" style="gap:6px;color:var(--accent)">${icon('file',13)} receipt_${r.id.toLowerCase()}.pdf</span>`],
         ['Approved by',UI.person(ME.id)]])}`,
-    foot:`<button class="btn btn-primary">Approve</button><button class="btn">Request receipt</button>`});
+    foot:`<button class="btn btn-primary">Approve</button><button class="btn">Request receipt</button>
+      ${canDelete()?`<button class="btn btn-ghost" style="color:var(--neg);margin-left:auto" data-act="delete-expense" data-id="${r.id}">Delete</button>`:''}`});
 }
 
 function assetDrawer(a){
@@ -3085,7 +3202,8 @@ function assetDrawer(a){
       ${versions.map(v=>`<div class="ver-item"><span class="ver-dot ${v===a.version?'cur':''}"></span>
         <span class="mono t-sm">${a.name.replace(/(_v\d+)?(\.\w+)$/,'_v'+v+'$2')}</span>
         <span class="t-xs dim" style="margin-left:auto">${v===a.version?'current':'superseded'}</span></div>`).join('')}`,
-    foot:`<button class="btn btn-primary">Download</button><button class="btn">Upload new version</button>`});
+    foot:`<button class="btn btn-primary">Download</button><button class="btn">Upload new version</button>
+      ${canDelete()?`<button class="btn btn-ghost" style="color:var(--neg);margin-left:auto" data-act="delete-asset" data-id="${a.id}">Delete</button>`:''}`});
 }
 
 function openDetail(type,id){
@@ -3160,7 +3278,9 @@ document.addEventListener('click',e=>{
     render(); return; }
 
   const openEl=t.closest('[data-open]');
-  if(openEl && openEl.dataset.open){ const [type,id]=openEl.dataset.open.split(':'); openDetail(type,id); return; }
+  const nestedAct=t.closest('[data-act]');
+  if(openEl && openEl.dataset.open && !(nestedAct && openEl.contains(nestedAct))){
+    const [type,id]=openEl.dataset.open.split(':'); openDetail(type,id); return; }
 
   const segEl=t.closest('[data-seg]');
   if(segEl){ const [name,val]=segEl.dataset.seg.split('|'); S.tab[name]=val;
@@ -3274,6 +3394,16 @@ function doAction(act,el){
     case 'approve-content': decideContent(el.dataset.id,true); break;
     case 'reject-content': decideContent(el.dataset.id,false); break;
     case 'approve-member': approveMember(el.dataset.id); break;
+    case 'delete-content': deleteContent(el.dataset.id); break;
+    case 'delete-campaign': deleteCampaign(el.dataset.id); break;
+    case 'delete-task': deleteTask(el.dataset.id); break;
+    case 'delete-revenue': deleteRevenue(el.dataset.id); break;
+    case 'delete-expense': deleteExpense(el.dataset.id); break;
+    case 'delete-budget': deleteBudget(el.dataset.id); break;
+    case 'delete-goal': deleteGoal(el.dataset.id); break;
+    case 'delete-asset': deleteAsset(el.dataset.id); break;
+    case 'delete-publishing': deletePublishing(el.dataset.id); break;
+    case 'delete-member': deleteMember(el.dataset.id); break;
   }
 }
 function approveExpense(id){

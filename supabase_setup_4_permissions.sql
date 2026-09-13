@@ -6,3 +6,6 @@ alter table public.team add column if not exists restricted_nav jsonb default '[
 update public.team
 set restricted_nav = '["revenue","expenses","costs","budget","profitability","users","company","approvals"]'::jsonb
 where id = 'tm2';
+
+-- Ram Kyle Bernardo: job title updated to Manager
+update public.team set role = 'Manager' where id = 'tm2';

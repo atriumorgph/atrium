@@ -641,7 +641,7 @@ const YTD = () => {
   const cut = a => a.slice(0, upto);
   const rev=sum(cut(SERIES.revenue)), dir=sum(cut(SERIES.direct)), op=sum(cut(SERIES.opex));
   return {revenue:rev,direct:dir,opex:op,expenses:dir+op,gross:rev-dir,net:rev-dir-op,
-    grossMargin:(rev-dir)/rev*100, netMargin:(rev-dir-op)/rev*100,
+    grossMargin: rev?(rev-dir)/rev*100:0, netMargin: rev?(rev-dir-op)/rev*100:0,
     published:sum(cut(SERIES.published)), views:sum(cut(SERIES.views)), followers:sum(cut(SERIES.followers))};
 };
 
@@ -687,18 +687,23 @@ const scoreBand = s => s>=70?{t:'Excellent',tone:'pos'}:s>=45?{t:'Solid',tone:'i
 function health(){
   if(!CONTENT.length && !REVENUE.length && !EXPENSES.length && !TASKS.length && !BUDGETS.length)
     return {checks:[], state:'No data yet', tone:'neutral', pct:null};
-  const m=metrics(S.month), checks=[
-    {name:'Net margin', ok:m.netMargin>=30, warn:m.netMargin>=18, value:F.pct(m.netMargin), hint:'Target is 30% or better'},
-    {name:'Cash runway', ok:m.cash> m.expenses*4, warn:m.cash>m.expenses*2, value:(m.expenses>0?(m.cash/m.expenses).toFixed(1)+' months':'—'), hint:'Cash divided by monthly spend'},
-    {name:'Cost per video', ok:m.costPerContent<=7500, warn:m.costPerContent<=9000, value:F.peso(m.costPerContent), hint:'Ceiling is ₱7,500'},
-    {name:'On-time delivery', ok:overdueTasks().length<=2, warn:overdueTasks().length<=5, value:overdueTasks().length+' overdue', hint:'Tasks past their due date'},
-    {name:'Budget discipline', ok:BUDGETS.every(b=>b.util<90), warn:BUDGETS.filter(b=>b.util>=95).length<=1, value:BUDGETS.filter(b=>b.util>=90).length+' near limit', hint:'Budgets above 90% used'},
-    {name:'Receivables', ok:m.ar < m.revenue*0.4, warn:m.ar < m.revenue*0.7, value:F.pesoK(m.ar), hint:'Unpaid invoices outstanding'}
+  const m=metrics(S.month);
+  const mk=(name,pending,ok,warn,value,hint)=>({name,pending,ok:!pending&&ok,warn:!pending&&warn,
+    value: pending?'not yet':value, hint});
+  const checks=[
+    mk('Net margin', m.revenue===0, m.netMargin>=30, m.netMargin>=18, F.pct(m.netMargin), 'Target is 30% or better'),
+    mk('Cash runway', m.expenses===0, m.cash>m.expenses*4, m.cash>m.expenses*2, (m.cash/m.expenses).toFixed(1)+' months', 'Cash divided by monthly spend'),
+    mk('Cost per video', m.published===0, m.costPerContent<=7500, m.costPerContent<=9000, F.peso(m.costPerContent), 'Ceiling is ₱7,500'),
+    mk('On-time delivery', TASKS.length===0, overdueTasks().length<=2, overdueTasks().length<=5, overdueTasks().length+' overdue', 'Tasks past their due date'),
+    mk('Budget discipline', BUDGETS.length===0, BUDGETS.every(b=>b.util<90), BUDGETS.filter(b=>b.util>=95).length<=1, BUDGETS.filter(b=>b.util>=90).length+' near limit', 'Budgets above 90% used'),
+    mk('Receivables', m.revenue===0, m.ar<m.revenue*0.4, m.ar<m.revenue*0.7, F.pesoK(m.ar), 'Unpaid invoices outstanding')
   ];
-  const bad=checks.filter(c=>!c.ok && !c.warn).length, mid=checks.filter(c=>!c.ok && c.warn).length;
-  const state = bad? 'Critical' : mid>=2 ? 'Needs attention' : 'Healthy';
-  return {checks, state, tone: state==='Healthy'?'pos':state==='Critical'?'neg':'warn',
-    pct: Math.round(checks.filter(c=>c.ok).length/checks.length*100)};
+  const scored=checks.filter(c=>!c.pending);
+  const bad=scored.filter(c=>!c.ok && !c.warn).length, mid=scored.filter(c=>!c.ok && c.warn).length;
+  const state = !scored.length ? 'No data yet' : bad? 'Critical' : mid>=2 ? 'Needs attention' : 'Healthy';
+  return {checks, state,
+    tone: state==='Healthy'?'pos':state==='Critical'?'neg':state==='No data yet'?'neutral':'warn',
+    pct: scored.length? Math.round(scored.filter(c=>c.ok).length/scored.length*100) : null};
 }
 
 /* the written executive summary — storytelling, not just numbers */
@@ -1352,22 +1357,24 @@ V.dashboard = () => {
       spark:Chart.spark(cut('revenue').map((r,i)=>(r-SERIES.direct[i])/SERIES.direct[i]*100),'var(--violet)'), open:'view:profitability'})}
   </div>`;
 
+  const hScored = h.checks.filter(c=>!c.pending);
+  const healthBody = h.checks.length
+    ? `<div class="row" style="gap:12px;margin-bottom:12px">
+        ${Chart.ring(h.pct||0,44,`var(--${h.tone})`)}
+        <div><div class="w6" style="font-size:14.5px;letter-spacing:-.02em">Business health</div>
+        <div class="t-sm dim">${hScored.length? hScored.filter(c=>c.ok).length+' of '+hScored.length+' checks are clear' : 'Not enough data to score yet'}</div></div>
+      </div>
+      ${h.checks.map(c=>`<div class="row" style="padding:5px 0;border-bottom:1px solid var(--line-2)" data-tip="${esc(c.hint)}">
+        <i class="dot ${c.pending?'':(c.ok?'pos':c.warn?'warn':'neg')}"></i><span class="t-sm ${c.pending?'dim':''}">${esc(c.name)}</span>
+        <span class="t-sm num w5 ${c.pending?'dim':''}" style="margin-left:auto">${esc(c.value)}</span></div>`).join('')}`
+    : UI.empty('No data yet','These checks read real content, tasks, revenue and expenses — once something is entered, this panel starts scoring it.');
+
   const summary = UI.card({
     title:'What changed this period',
     note:`${MONTHS[S.month]} ${YEAR()} · read from live operating data`,
     actions:`<span class="badge ${h.tone}"><i class="dot ${h.tone}"></i>${h.state}</span>`,
     body:`<div class="grid g-1-2" style="gap:22px">
-      <div>
-        ${h.checks.length ? `<div class="row" style="gap:12px;margin-bottom:12px">
-          ${Chart.ring(h.pct,44,`var(--${h.tone})`)}
-          <div><div class="w6" style="font-size:14.5px;letter-spacing:-.02em">Business health</div>
-          <div class="t-sm dim">${h.checks.filter(c=>c.ok).length} of ${h.checks.length} checks are clear</div></div>
-        </div>
-        ${h.checks.map(c=>`<div class="row" style="padding:5px 0;border-bottom:1px solid var(--line-2)" data-tip="${esc(c.hint)}">
-          <i class="dot ${c.ok?'pos':c.warn?'warn':'neg'}"></i><span class="t-sm">${esc(c.name)}</span>
-          <span class="t-sm num w5" style="margin-left:auto">${esc(c.value)}</span></div>`).join('')}`
-        : UI.empty('No data yet','These checks read real content, tasks, revenue and expenses — once something is entered, this panel starts scoring it.')}
-      </div>
+      <div>${healthBody}</div>
       <div>${insights().map(UI.insightRow).join('')}</div>
     </div>`});
 
@@ -2037,7 +2044,7 @@ const cmpStats = c => {
   const items=CONTENT.filter(x=>x.campaign===c.id);
   const pub=items.filter(x=>x.isPublished);
   return {...c, items, pub:pub.length, views:sum(pub,x=>x.views), followers:sum(pub,x=>x.followers),
-    profit:c.revenue-c.spent, roi:c.spent?(c.revenue-c.spent)/c.spent*100:0, util:c.spent/c.budget*100,
+    profit:c.revenue-c.spent, roi:c.spent?(c.revenue-c.spent)/c.spent*100:0, util:c.budget?c.spent/c.budget*100:0,
     er: sum(pub,x=>x.views)? sum(pub,x=>x.engagements)/sum(pub,x=>x.views)*100 : 0};
 };
 V.campaigns = () => {
@@ -3966,7 +3973,7 @@ function doExport(what){
       {k:'dept',label:'Department'},{k:'priority',label:'Priority'},{k:'status',label:'Status'},{k:'due',label:'Due'}],TASKS],
     campaigns:['campaigns',[{k:'name',label:'Campaign'},{k:'status',label:'Status'},{k:'budget',label:'Budget'},
       {k:'spent',label:'Spent'},{k:'revenue',label:'Revenue'},{k:'profit',label:'Profit',raw:r=>r.revenue-r.spent},
-      {k:'roi',label:'ROI %',raw:r=>((r.revenue-r.spent)/r.spent*100).toFixed(1)}],CAMPAIGNS],
+      {k:'roi',label:'ROI %',raw:r=>(r.spent?(r.revenue-r.spent)/r.spent*100:0).toFixed(1)}],CAMPAIGNS],
     platforms:['platforms',[{k:'name',label:'Platform'},{k:'count',label:'Posts'},{k:'views',label:'Views'},
       {k:'er',label:'Engagement %',raw:r=>r.er.toFixed(2)},{k:'revenue',label:'Revenue'},
       {k:'roi',label:'ROI %',raw:r=>r.roi.toFixed(1)}],byPlatform()],

@@ -3809,8 +3809,8 @@ function renderAuthScreen(msg){
     <div class="card" style="width:340px;max-width:100%">
       <div class="card-body">
         <div style="display:flex;justify-content:center;margin-bottom:16px">${LOGO.mark(32)}</div>
-        <div class="w6" style="font-size:16px;text-align:center;margin-bottom:2px">Sign in to Atrium</div>
-        <div class="t-xs dim" style="text-align:center;margin-bottom:20px">Admin access only</div>
+        <div class="w6" style="font-size:16px;text-align:center;margin-bottom:2px">Welcome to Atrium</div>
+        <div class="t-xs dim" style="text-align:center;margin-bottom:20px">A smarter way to manage your operations.</div>
         ${msg?`<div class="note neg" style="margin-bottom:14px">${esc(msg)}</div>`:''}
         <div class="field" style="margin-bottom:12px"><span class="label">Email</span>
           <input class="input" id="authEmail" type="email" style="width:100%" placeholder="you@atrium.ph"></div>

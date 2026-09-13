@@ -3264,7 +3264,8 @@ function go(id){
 async function boot(){
   let hash='';
   try{ hash=(location.hash||'').replace('#/',''); }catch(e){}
-  S.view = (V[hash] && canAccess(hash)) ? hash : 'dashboard';
+  S.view = 'dashboard';   /* every load — fresh open or refresh — starts at the dashboard */
+  try{ history.replaceState(null,'','#/dashboard'); }catch(e){}
   S._fresh = !hash;   /* only greet on a genuinely fresh open, not a refresh */
   $('#periodSel').innerHTML=MONTHS.map((m,i)=>`<option value="${i}" ${i===S.month?'selected':''}>${m} ${YEAR()}</option>`).join('');
   $('#searchIcon').innerHTML=icon('search',14);

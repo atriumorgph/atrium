@@ -9,3 +9,7 @@ where id = 'tm2';
 
 -- Ram Kyle Bernardo: job title updated to Manager
 update public.team set role = 'Manager' where id = 'tm2';
+
+-- align access level with actual job title: Jaymar is the one true Owner, Kyle is Manager
+update public.team set access = 'owner' where id = 'tm9';
+update public.team set access = 'manager' where id = 'tm2';

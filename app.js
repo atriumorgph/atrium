@@ -990,8 +990,9 @@ function exportCSV(name,cols,rows){
    ============================================================ */
 const NAV = [
   {group:'Command centre', items:[
-    {id:'dashboard', label:'Dashboard', icon:'dashboard'},
-    {id:'briefing',  label:'Management view', icon:'briefing'}]},
+    {id:'dashboard',  label:'Dashboard', icon:'dashboard'},
+    {id:'briefing',   label:'Management view', icon:'briefing'},
+    {id:'approvals',  label:'Approvals', icon:'checkC'}]},
   {group:'Content', items:[
     {id:'planner',    label:'Content planner', icon:'planner'},
     {id:'production', label:'Production', icon:'production'},
@@ -1025,12 +1026,21 @@ const NAV = [
 const NAV_INDEX = {};
 NAV.forEach(g=>g.items.forEach(i=>NAV_INDEX[i.id]={...i,group:g.group}));
 
+function pendingApprovals(){
+  return {
+    expenses: EXPENSES.filter(e=>e.approval==='Pending'),
+    content: CONTENT.filter(c=>c.status==='Review'),
+    members: TEAM.filter(t=>t.status==='Invited')
+  };
+}
 function navCount(id){
   let c = null;
   if(id==='tasks'){ const n=overdueTasks().length; c = n?{n,alert:true}:{n:openTasks().length}; }
   else if(id==='notifications'){ const n=NOTIFS.filter(x=>!x.read).length; c = n?{n,alert:true}:null; }
   else if(id==='planner') c = {n:CONTENT.filter(x=>!x.isPublished).length};
   else if(id==='production') c = {n:inProduction().length};
+  else if(id==='approvals'){ const p=pendingApprovals();
+    const n=p.expenses.length+p.content.length+p.members.length; c = n?{n,alert:true}:null; }
   return c && c.n ? c : null;        /* a badge with nothing to count is just noise */
 }
 function renderNav(){
@@ -1055,6 +1065,11 @@ briefing:{line:'The 30-second version, for an owner, a bank or an investor who w
   you:['Open it before a meeting','Press PDF and take it with you'],
   from:['Monthly finance totals','The strongest campaign of the period'],
   feeds:[], note:'Nothing — this is an exit door for data'},
+approvals:{line:'One queue for everything that needs the owner’s sign-off before it moves further.',
+  you:['Approve or send back content sitting in Review','Approve expenses before they count as final','Activate a newly invited team member'],
+  from:['Expenses recorded as Pending','Content moved into the Review stage','Team members just invited'],
+  feeds:[['expenses','Expenses'],['planner','Content planner'],['team','Team']],
+  watch:'Approving here is the same as editing the record directly — there is no separate audit trail beyond the Activity log.'},
 planner:{line:'Where content is born. Every video in the system starts life as a card on this screen, and gets the ID that everything else hangs off.',
   you:['Create content and give it an owner, editor and deadline','Drag cards between stages as work moves','Set the estimated cost before you spend anything'],
   from:['What you type — this screen is a source, not a mirror'],
@@ -1407,6 +1422,47 @@ V.briefing = () => {
         </div>
         <button class="btn mt-l" style="width:100%" data-open="campaign:${topCmp.id}">Open campaign</button>` : UI.empty('No campaigns yet','Group content under a budget and an objective, and the best performer shows up here.')})}
     </div>`;
+};
+
+/* ============================================================
+   9b. VIEW — APPROVALS
+   Everything in the system that needs the owner's sign-off
+   before it goes further, in one queue.
+   ============================================================ */
+V.approvals = () => {
+  const p=pendingApprovals();
+  const total=p.expenses.length+p.content.length+p.members.length;
+  const row=(left,right,actions)=>`<div class="row" style="padding:11px 16px;border-bottom:1px solid var(--line-2);gap:10px">
+    <span style="min-width:0">${left}</span>
+    <span style="margin-left:auto;text-align:right;white-space:nowrap">${right}</span>
+    <span class="row" style="gap:6px">${actions}</span></div>`;
+  const btn=(label,act,id,cls='btn-sm')=>`<button class="btn ${cls}" data-act="${act}" data-id="${id}">${label}</button>`;
+
+  return pageHead('Approvals',
+    total ? `${total} item${total===1?' is':'s are'} waiting on you — expenses, content and people, in one place.`
+      : 'Nothing is waiting on you right now. New expenses, content in Review, and invited team members will show up here.',
+    '')
+  + UI.card({title:'Expenses',note:p.expenses.length+' pending', flush:true,
+      body: p.expenses.length ? p.expenses.map(e=>row(
+        `<span class="cell-main truncate" style="display:block">${esc(e.description)}</span>
+         <span class="cell-sub">${esc(e.vendor)} · ${esc(e.category)} · ${F.date(e.date)}</span>`,
+        `<span class="w6 num">${F.peso(e.amount)}</span>`,
+        btn('Approve','approve-expense',e.id,'btn-sm btn-primary')
+      )).join('') : UI.empty('Nothing pending','Every recorded expense is already approved.')})
+  + UI.card({title:'Content in review',note:p.content.length+' pending', flush:true,
+      body: p.content.length ? p.content.map(c=>row(
+        `<span class="cell-main truncate" style="display:block">${esc(c.title)}</span>
+         <span class="cell-sub">${esc(c.type)} · owned by ${esc(memName(c.owner))} · due ${F.date(c.deadline)}</span>`,
+        '',
+        btn('Send back','reject-content',c.id)+btn('Approve','approve-content',c.id,'btn-sm btn-primary')
+      )).join('') : UI.empty('Nothing pending','No content is sitting in Review right now.')})
+  + UI.card({title:'Team invites',note:p.members.length+' pending', flush:true,
+      body: p.members.length ? p.members.map(t=>row(
+        `<span class="cell-main truncate" style="display:block">${esc(t.name)}</span>
+         <span class="cell-sub">${esc(t.role)} · ${esc(t.email)} · ${roleName(t.access)}</span>`,
+        '',
+        btn('Activate','approve-member',t.id,'btn-sm btn-primary')
+      )).join('') : UI.empty('Nothing pending','No invited member is waiting to be activated.')});
 };
 
 /* ============================================================
@@ -3204,7 +3260,34 @@ function doAction(act,el){
     case 'assign': reassignModal(el.dataset.id); break;
     case 'save-reassign': saveReassign(el.dataset.id); break;
     case 'logout': doLogout(); break;
+    case 'approve-expense': approveExpense(el.dataset.id); break;
+    case 'approve-content': decideContent(el.dataset.id,true); break;
+    case 'reject-content': decideContent(el.dataset.id,false); break;
+    case 'approve-member': approveMember(el.dataset.id); break;
   }
+}
+function approveExpense(id){
+  const e=EXPENSES.find(x=>x.id===id); if(!e) return;
+  e.approval='Approved'; persistExpense(e);
+  logActivity({id:newId('LOG'),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),
+    who:ME.id,what:'approved expense',ref:e.id,label:e.description+' — '+F.peso(e.amount),type:'Approval'});
+  render(); toast('Approved — '+e.description,'checkC');
+}
+function decideContent(id,approve){
+  const c=CT[id]; if(!c) return;
+  c.status = approve ? 'Approved' : 'Revision';
+  c.stageIndex = STAGES.indexOf(c.status);
+  persistContent(c);
+  logActivity({id:newId('LOG'),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),
+    who:ME.id,what: approve?'approved':'sent back for revision',ref:c.id,label:c.title,type:'Approval'});
+  render(); toast((approve?'Approved — ':'Sent back — ')+c.title, approve?'checkC':'refresh');
+}
+function approveMember(id){
+  const t=MEM[id]; if(!t) return;
+  t.status='Active'; persistTeam(t);
+  logActivity({id:newId('LOG'),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),
+    who:ME.id,what:'activated the account of',ref:t.id,label:t.name,type:'Approval'});
+  render(); toast('Activated — '+t.name,'checkC');
 }
 const EXPENSE_CATS=['Production','Freelancers','Transportation','Food','Software','Rent','Utilities','Marketing','Equipment','Other'];
 const REVENUE_SOURCES=['Brand deal','Ad revenue','Affiliate','Retainer','Product sales','Other'];

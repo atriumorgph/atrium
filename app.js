@@ -3873,6 +3873,7 @@ document.addEventListener('keydown',e=>{
 });
 $('#openPalette').addEventListener('click',openPalette);
 $('#themeBtn').addEventListener('click',()=>doAction('theme'));
+$('#guideBtn').addEventListener('click',()=>doAction('guide'));
 $('#bellBtn').addEventListener('click',()=>go('notifications'));
 $('#navToggle').addEventListener('click',()=>{
   if(innerWidth<=900){ S.navOpen=!S.navOpen; $('#app').classList.toggle('nav-open',S.navOpen); }

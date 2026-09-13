@@ -3185,8 +3185,8 @@ document.addEventListener('change',e=>{
   if(f && f.dataset.filter.startsWith('uacc:')){
     const t=MEM[f.dataset.filter.slice(5)];
     if(t && t.id!==ME.id){
-      const was=roleName(t.access); t.access=f.value;
-      ACTIVITY.unshift({id:'LOG-r'+Math.random(), date:new Date().toISOString().slice(0,10),
+      const was=roleName(t.access); t.access=f.value; persistTeam(t);
+      logActivity({id:newId('LOG'), date:new Date().toISOString().slice(0,10),
         time:new Date().toTimeString().slice(0,5), who:ME.id,
         what:`changed access from ${was} to ${roleName(t.access)} for`, ref:t.id, label:t.name, type:'Access'});
       render(); toast(t.name+' is now '+roleName(t.access),'user');

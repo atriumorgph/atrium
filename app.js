@@ -359,6 +359,12 @@ async function loadFromSupabase(){
     if(teamRows && teamRows.length){
       TEAM.length=0; Object.keys(MEM).forEach(k=>delete MEM[k]);
       teamRows.forEach(r=>{ const t=hydrateTeamRow(r); TEAM.push(t); MEM[t.id]=t; });
+      try{
+        const {data:{session}} = await sb.auth.getSession();
+        const email = session && session.user && session.user.email;
+        const match = email && TEAM.find(t=>t.email && t.email.toLowerCase()===email.toLowerCase());
+        if(match) Object.assign(ME, match);
+      }catch(e){}
     }
     if(contentRows){
       CONTENT.length=0; Object.keys(CT).forEach(k=>delete CT[k]);
@@ -3197,6 +3203,7 @@ function doAction(act,el){
     case 'save-schedule': saveSchedule(); break;
     case 'assign': reassignModal(el.dataset.id); break;
     case 'save-reassign': saveReassign(el.dataset.id); break;
+    case 'logout': doLogout(); break;
   }
 }
 const EXPENSE_CATS=['Production','Freelancers','Transportation','Food','Software','Rent','Utilities','Marketing','Equipment','Other'];
@@ -3790,4 +3797,56 @@ $('#view').innerHTML=`<div class="view-inner">
   <div class="sk" style="height:220px;margin-bottom:14px"></div>
   <div class="grid g-2">${Array.from({length:2}).map(()=>'<div class="sk" style="height:280px"></div>').join('')}</div>
 </div>`;
-setTimeout(async()=>{ await boot(); if(S._fresh) setTimeout(welcome,420); },220);
+/* ============================================================
+   38. AUTH
+   Login-gated: nothing in the app loads until Supabase confirms
+   a signed-in session belonging to an admin listed in `team`.
+   ============================================================ */
+function renderAuthScreen(msg){
+  $('#app').style.display='none';
+  const el=$('#authScreen'); el.hidden=false;
+  el.innerHTML=`<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--surface-2);padding:16px">
+    <div class="card" style="width:340px;max-width:100%">
+      <div class="card-body">
+        <div style="display:flex;justify-content:center;margin-bottom:16px">${LOGO.mark(32)}</div>
+        <div class="w6" style="font-size:16px;text-align:center;margin-bottom:2px">Sign in to Atrium</div>
+        <div class="t-xs dim" style="text-align:center;margin-bottom:20px">Admin access only</div>
+        ${msg?`<div class="note neg" style="margin-bottom:14px">${esc(msg)}</div>`:''}
+        <div class="field" style="margin-bottom:12px"><span class="label">Email</span>
+          <input class="input" id="authEmail" type="email" style="width:100%" placeholder="you@atrium.ph"></div>
+        <div class="field" style="margin-bottom:18px"><span class="label">Password</span>
+          <input class="input" id="authPass" type="password" style="width:100%" placeholder="••••••••"></div>
+        <button class="btn btn-primary" id="authSubmit" style="width:100%">Sign in</button>
+      </div>
+    </div>
+  </div>`;
+  $('#authSubmit').addEventListener('click', doLogin);
+  $('#authPass').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+  $('#authEmail').focus();
+}
+async function doLogin(){
+  const email=$('#authEmail').value.trim(), pass=$('#authPass').value;
+  const btn=$('#authSubmit'); btn.disabled=true; btn.textContent='Signing in…';
+  const {error} = await sb.auth.signInWithPassword({email,password:pass});
+  if(error){ renderAuthScreen(error.message); return; }
+  location.reload();
+}
+function doLogout(){
+  if(!sb) return;
+  sb.auth.signOut().then(()=>location.reload());
+}
+function showApp(){
+  $('#authScreen').hidden=true;
+  $('#app').style.display='';
+}
+async function startApp(){
+  if(!sb){ await boot(); if(S._fresh) setTimeout(welcome,420); return; }
+  const {data:{session}} = await sb.auth.getSession();
+  if(!session){ renderAuthScreen(); return; }
+  showApp();
+  await boot();
+  if(S._fresh) setTimeout(welcome,420);
+}
+if(sb) sb.auth.onAuthStateChange((event)=>{ if(event==='SIGNED_OUT') location.reload(); });
+
+setTimeout(startApp,220);

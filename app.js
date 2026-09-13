@@ -1848,7 +1848,10 @@ V.publishing = () => {
       {k:'status',label:'Status',cell:r=>UI.badge(r.status, r.status==='Published'?'pos':r.status==='Scheduled'?'violet':r.status==='Failed'?'neg':'neutral',true)},
       {k:'url',label:'Link',align:'r',sortable:false,cell:r=>r.url?`<span class="row" style="justify-content:flex-end;color:var(--accent)">${icon('ext',13)}</span>`:'<span class="faint">—</span>'},
       ...(canDelete()?[{k:'x',label:'',align:'r',sortable:false,cell:r=>
-        `<button class="btn btn-ghost btn-sm" style="color:var(--neg)" data-act="delete-publishing" data-id="${r.id}">Delete</button>`}]:[])
+        `<span class="row" style="gap:6px;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" data-act="edit-schedule" data-id="${r.id}">Edit</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--neg)" data-act="delete-publishing" data-id="${r.id}">Delete</button>
+        </span>`}]:[])
     ], rows})});
 };
 
@@ -2226,7 +2229,10 @@ V.tasks = () => {
       {k:'due',label:'Due',align:'r',cell:r=>`<div>${F.date(r.due)}</div>
         <div class="cell-sub" style="color:${r.overdue?'var(--neg)':''}">${r.status==='Done'?'done':relDays(r.due)}</div>`},
       ...(canDelete()?[{k:'x',label:'',align:'r',sortable:false,cell:r=>
-        `<button class="btn btn-ghost btn-sm" style="color:var(--neg)" data-act="delete-task" data-id="${r.id}">Delete</button>`}]:[])
+        `<span class="row" style="gap:6px;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" data-act="edit-task" data-id="${r.id}">Edit</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--neg)" data-act="delete-task" data-id="${r.id}">Delete</button>
+        </span>`}]:[])
     ],rows,open:r=>r.content?'content:'+r.content:'',
       emptyTitle:'No tasks here',emptyText:'Everything in this view is clear. Pick another tab to see the rest.'})});
 };
@@ -2323,7 +2329,10 @@ V.goals = () => {
         ${UI.meter(Math.min(g.pct,100),tone)}
         <div class="t-xs dim" style="margin-top:7px">${done? 'Target met. Holding this pace clears the quarter.'
           : `${fmt(g,Math.abs(g.variance))} to go — roughly ${Math.ceil(Math.abs(g.variance)/(g.actual/11))} days at the current run rate.`}</div>
-        ${canDelete()?`<button class="btn btn-ghost btn-sm" style="color:var(--neg);margin-top:10px" data-act="delete-goal" data-id="${g.id}">Delete</button>`:''}
+        ${canDelete()?`<div class="row" style="gap:6px;margin-top:10px">
+          <button class="btn btn-ghost btn-sm" data-act="edit-goal" data-id="${g.id}">Edit</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--neg)" data-act="delete-goal" data-id="${g.id}">Delete</button>
+        </div>`:''}
       </div></article>`;}).join('')}</div>`;
 };
 
@@ -2525,7 +2534,10 @@ V.budget = () => {
         {k:'util',label:'Utilisation',align:'r',cell:r=>`<span class="row" style="justify-content:flex-end;gap:8px">
           <span class="num w5">${F.pct(r.util)}</span><span style="width:60px">${UI.meter(r.util,r.util>=95?'neg':r.util>=85?'warn':'pos')}</span></span>`},
         ...(canDelete()?[{k:'x',label:'',align:'r',sortable:false,cell:r=>
-          `<button class="btn btn-ghost btn-sm" style="color:var(--neg)" data-act="delete-budget" data-id="${r.id}">Delete</button>`}]:[])
+          `<span class="row" style="gap:6px;justify-content:flex-end">
+            <button class="btn btn-ghost btn-sm" data-act="edit-budget" data-id="${r.id}">Edit</button>
+            <button class="btn btn-ghost btn-sm" style="color:var(--neg)" data-act="delete-budget" data-id="${r.id}">Delete</button>
+          </span>`}]:[])
       ],rows,foot:`<td colspan="2">Totals</td><td class="r">${F.peso(tot.budget)}</td><td class="r">${F.peso(tot.actual)}</td>
         <td class="r">${F.peso(tot.budget-tot.actual)}</td><td></td><td class="r">${F.pct(tot.actual/tot.budget*100)}</td>${canDelete()?'<td></td>':''}`})})}`;
 };
@@ -2810,6 +2822,7 @@ V.users = () => {
           {k:'lastActive',label:'Last active',cell:t=>`<span class="t-xs dim">${t.lastActive==='now'?'right now':(t.lastActive||'never')}</span>`},
           {k:'x',label:'',align:'r',sort:false,cell:t=> t.id===ME.id ? ''
             : `<span class="row" style="gap:6px;justify-content:flex-end">
+                ${canDelete()?`<button class="btn btn-ghost btn-sm" data-act="edit-member" data-id="${t.id}">Edit</button>`:''}
                 <button class="btn btn-ghost btn-sm" data-act="toggle-user" data-id="${t.id}">${t.status==='Disabled'?'Enable':'Disable'}</button>
                 ${canDelete()?`<button class="btn btn-ghost btn-sm" style="color:var(--neg)" data-act="delete-member" data-id="${t.id}">Delete</button>`:''}
               </span>`}
@@ -3076,6 +3089,7 @@ function contentDrawer(c){
     body:tabsBar+body,
     foot:`<button class="btn" data-act="advance" data-id="${c.id}">${icon('chevR',14)} Move to next stage</button>
       <button class="btn" data-act="assign" data-id="${c.id}">Reassign</button>
+      ${canDelete()?`<button class="btn" data-act="edit-content" data-id="${c.id}">Edit</button>`:''}
       ${canDelete()?`<button class="btn btn-ghost" style="color:var(--neg)" data-act="delete-content" data-id="${c.id}">Delete</button>`:''}
       <span class="t-xs faint" style="margin-left:auto">Owner ${esc(memName(c.owner))}</span>`});
 }
@@ -3139,6 +3153,7 @@ function campaignDrawer(c0){
         <div class="row" style="padding:7px 0;border-bottom:1px solid var(--line-2)"><span class="t-sm truncate">${esc(e.description)}</span>
         <span class="num w5 t-sm" style="margin-left:auto">${F.peso(e.amount)}</span></div>`).join('')}`:''}`,
     foot:`<button class="btn" data-go="campaigns">All campaigns</button>
+      ${canDelete()?`<button class="btn" data-act="edit-campaign" data-id="${c.id}">Edit</button>`:''}
       ${canDelete()?`<button class="btn btn-ghost" style="color:var(--neg)" data-act="delete-campaign" data-id="${c.id}">Delete</button>`:''}
       <span class="t-xs faint" style="margin-left:auto">${F.pct(c.roi,0)} return on spend</span>`});
 }
@@ -3173,7 +3188,8 @@ function txnDrawer(kind,r){
         ['Platform',PLAT[r.platform].name],['Payment status',r.status],
         ['Notes','Net 30 terms. Payment confirmed against the studio account.']])}`,
     foot:`<button class="btn btn-primary" data-act="mark-paid">Mark as paid</button><button class="btn">Send reminder</button>
-      ${canDelete()?`<button class="btn btn-ghost" style="color:var(--neg);margin-left:auto" data-act="delete-revenue" data-id="${r.id}">Delete</button>`:''}`});
+      ${canDelete()?`<button class="btn" style="margin-left:auto" data-act="edit-revenue" data-id="${r.id}">Edit</button>`:''}
+      ${canDelete()?`<button class="btn btn-ghost" style="color:var(--neg)" data-act="delete-revenue" data-id="${r.id}">Delete</button>`:''}`});
   else openDrawer({eyebrow:'Expense · '+r.id, title:r.description,
     sub:`${esc(r.vendor)} <span class="dim">·</span> ${F.dateFull(r.date)}`,
     body:`<div class="kpi" style="margin-bottom:16px"><div class="kpi-label">Amount</div>
@@ -3187,7 +3203,8 @@ function txnDrawer(kind,r){
         ['Receipt',`<span class="row" style="gap:6px;color:var(--accent)">${icon('file',13)} receipt_${r.id.toLowerCase()}.pdf</span>`],
         ['Approved by',UI.person(ME.id)]])}`,
     foot:`<button class="btn btn-primary">Approve</button><button class="btn">Request receipt</button>
-      ${canDelete()?`<button class="btn btn-ghost" style="color:var(--neg);margin-left:auto" data-act="delete-expense" data-id="${r.id}">Delete</button>`:''}`});
+      ${canDelete()?`<button class="btn" style="margin-left:auto" data-act="edit-expense" data-id="${r.id}">Edit</button>`:''}
+      ${canDelete()?`<button class="btn btn-ghost" style="color:var(--neg)" data-act="delete-expense" data-id="${r.id}">Delete</button>`:''}`});
 }
 
 function assetDrawer(a){
@@ -3204,7 +3221,8 @@ function assetDrawer(a){
         <span class="mono t-sm">${a.name.replace(/(_v\d+)?(\.\w+)$/,'_v'+v+'$2')}</span>
         <span class="t-xs dim" style="margin-left:auto">${v===a.version?'current':'superseded'}</span></div>`).join('')}`,
     foot:`<button class="btn btn-primary">Download</button><button class="btn">Upload new version</button>
-      ${canDelete()?`<button class="btn btn-ghost" style="color:var(--neg);margin-left:auto" data-act="delete-asset" data-id="${a.id}">Delete</button>`:''}`});
+      ${canDelete()?`<button class="btn" style="margin-left:auto" data-act="edit-asset" data-id="${a.id}">Edit</button>`:''}
+      ${canDelete()?`<button class="btn btn-ghost" style="color:var(--neg)" data-act="delete-asset" data-id="${a.id}">Delete</button>`:''}`});
 }
 
 function openDetail(type,id){
@@ -3358,7 +3376,8 @@ function doAction(act,el){
     case 'customise': customiseModal(); break;
     case 'new-content': newContentModal(); break;
     case 'invite-user': inviteUserModal(); break;
-    case 'save-user': saveUser(); break;
+    case 'save-user': saveUser(el.dataset.id||undefined); break;
+    case 'edit-member': if(canDelete()) inviteUserModal(el.dataset.id); break;
     case 'toggle-user': {
       const t=MEM[el.dataset.id]; if(!t) break;
       t.status = t.status==='Disabled' ? 'Active' : 'Disabled';
@@ -3367,27 +3386,36 @@ function doAction(act,el){
         time:new Date().toTimeString().slice(0,5), who:ME.id,
         what:(t.status==='Disabled'?'disabled':'re-enabled')+' the account of', ref:t.id, label:t.name, type:'Access'});
       render(); toast(t.name+' is now '+t.status.toLowerCase(), t.status==='Disabled'?'lock':'check'); break; }
-    case 'save-content': saveContent(); break;
+    case 'save-content': saveContent(el.dataset.id||undefined); break;
+    case 'edit-content': if(canDelete()) newContentModal(el.dataset.id); break;
     case 'advance': advanceStage(el.dataset.id); break;
     case 'mark-paid': closeLayers(); toast('Invoice marked as paid'); break;
     case 'profile': openDetail('member',ME.id); break;
     case 'new-campaign': newCampaignModal(); break;
-    case 'save-campaign': saveCampaign(); break;
+    case 'save-campaign': saveCampaign(el.dataset.id||undefined); break;
+    case 'edit-campaign': if(canDelete()) newCampaignModal(el.dataset.id); break;
     case 'new-task': newTaskModal(); break;
-    case 'save-task': saveTask(); break;
+    case 'save-task': saveTask(el.dataset.id||undefined); break;
+    case 'edit-task': if(canDelete()) newTaskModal(el.dataset.id); break;
     case 'new-expense': newExpenseModal(); break;
-    case 'save-expense': saveExpense(); break;
+    case 'save-expense': saveExpense(el.dataset.id||undefined); break;
+    case 'edit-expense': if(canDelete()) newExpenseModal(el.dataset.id); break;
     case 'new-revenue': newRevenueModal(); break;
-    case 'save-revenue': saveRevenue(); break;
+    case 'save-revenue': saveRevenue(el.dataset.id||undefined); break;
+    case 'edit-revenue': if(canDelete()) newRevenueModal(el.dataset.id); break;
     case 'new-budget': newBudgetModal(); break;
-    case 'save-budget': saveBudget(); break;
+    case 'save-budget': saveBudget(el.dataset.id||undefined); break;
+    case 'edit-budget': if(canDelete()) newBudgetModal(el.dataset.id); break;
     case 'new-goal': newGoalModal(); break;
-    case 'save-goal': saveGoal(); break;
+    case 'save-goal': saveGoal(el.dataset.id||undefined); break;
+    case 'edit-goal': if(canDelete()) newGoalModal(el.dataset.id); break;
     case 'new-member': inviteUserModal(); break;
     case 'upload': newAssetModal(); break;
-    case 'save-asset': saveAsset(); break;
+    case 'save-asset': saveAsset(el.dataset.id||undefined); break;
+    case 'edit-asset': if(canDelete()) newAssetModal(el.dataset.id); break;
     case 'schedule': newScheduleModal(); break;
-    case 'save-schedule': saveSchedule(); break;
+    case 'save-schedule': saveSchedule(el.dataset.id||undefined); break;
+    case 'edit-schedule': if(canDelete()) newScheduleModal(el.dataset.id); break;
     case 'assign': reassignModal(el.dataset.id); break;
     case 'save-reassign': saveReassign(el.dataset.id); break;
     case 'logout': doLogout(); break;
@@ -3434,20 +3462,31 @@ const EXPENSE_CATS=['Production','Freelancers','Transportation','Food','Software
 const REVENUE_SOURCES=['Brand deal','Ad revenue','Affiliate','Retainer','Product sales','Other'];
 const ASSET_TYPES=['Video','Image','Audio','Design','Document','Other'];
 
-function newCampaignModal(){
-  openModal({title:'New campaign', sub:'Groups content under one budget and one objective.',
+function newCampaignModal(editId){
+  const c = editId ? CMP[editId] : null;
+  openModal({title: c?'Edit campaign':'New campaign', sub:'Groups content under one budget and one objective.',
     body:`<div class="grid g-2">
-      <div class="field" style="grid-column:1/-1"><span class="label">Name</span><input class="input" id="cpName" placeholder="e.g. September Push"></div>
-      <div class="field" style="grid-column:1/-1"><span class="label">Objective</span><input class="input" id="cpObj" placeholder="What this campaign is for"></div>
-      <div class="field"><span class="label">Start date</span><input class="input" type="date" id="cpStart" value="${iso(TODAY)}"></div>
-      <div class="field"><span class="label">End date</span><input class="input" type="date" id="cpEnd" value="${iso(new Date(TODAY.getTime()+30*864e5))}"></div>
-      <div class="field"><span class="label">Budget</span><input class="input" id="cpBudget" type="number" value="20000" step="1000"></div>
-      <div class="field"><span class="label">Status</span>${UI.select('x',['Active','Planned','Completed','Paused'],'Active','100%').replace('data-filter="x"','id="cpStatus"')}</div>
+      <div class="field" style="grid-column:1/-1"><span class="label">Name</span><input class="input" id="cpName" placeholder="e.g. September Push" value="${c?esc(c.name):''}"></div>
+      <div class="field" style="grid-column:1/-1"><span class="label">Objective</span><input class="input" id="cpObj" placeholder="What this campaign is for" value="${c?esc(c.objective):''}"></div>
+      <div class="field"><span class="label">Start date</span><input class="input" type="date" id="cpStart" value="${c?c.start:iso(TODAY)}"></div>
+      <div class="field"><span class="label">End date</span><input class="input" type="date" id="cpEnd" value="${c?c.end:iso(new Date(TODAY.getTime()+30*864e5))}"></div>
+      <div class="field"><span class="label">Budget</span><input class="input" id="cpBudget" type="number" value="${c?c.budget:20000}" step="1000"></div>
+      <div class="field"><span class="label">Status</span>${UI.select('x',['Active','Planned','Completed','Paused'],c?c.status:'Active','100%').replace('data-filter="x"','id="cpStatus"')}</div>
     </div>`,
-    foot:`<button class="btn" data-close="1">Cancel</button><button class="btn btn-primary" data-act="save-campaign">Create campaign</button>`});
+    foot:`<button class="btn" data-close="1">Cancel</button><button class="btn btn-primary" data-act="save-campaign" data-id="${editId||''}">${c?'Save changes':'Create campaign'}</button>`});
 }
-function saveCampaign(){
+function saveCampaign(editId){
   const name=$('#cpName').value.trim()||'Untitled campaign';
+  if(editId){
+    const c=CMP[editId]; if(!c) return;
+    Object.assign(c,{name,objective:$('#cpObj').value.trim(),start:$('#cpStart').value,end:$('#cpEnd').value,
+      budget:+$('#cpBudget').value||0,status:$('#cpStatus').value});
+    persistCampaign(c);
+    logActivity({id:newId('LOG'),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),
+      who:ME.id,what:'edited campaign',ref:editId,label:name,type:'Campaign'});
+    closeLayers(); render(); if($('.drawer')) openDetail('campaign',editId); toast('Saved changes — '+name,'check');
+    return;
+  }
   const id=newId('CMP');
   const c={id,name,objective:$('#cpObj').value.trim(),start:$('#cpStart').value,end:$('#cpEnd').value,
     budget:+$('#cpBudget').value||0,spent:0,revenue:0,status:$('#cpStatus').value,team:[],platforms:[]};
@@ -3457,21 +3496,33 @@ function saveCampaign(){
   closeLayers(); go('campaigns'); toast('Created campaign — '+name,'plus');
 }
 
-function newTaskModal(){
-  openModal({title:'New task', sub:'Stays linked to the content and person it belongs to.',
+function newTaskModal(editId){
+  const t = editId ? TASKS.find(x=>x.id===editId) : null;
+  openModal({title: t?'Edit task':'New task', sub:'Stays linked to the content and person it belongs to.',
     body:`<div class="grid g-2">
-      <div class="field" style="grid-column:1/-1"><span class="label">Title</span><input class="input" id="tkTitle" placeholder="What needs to happen"></div>
-      <div class="field"><span class="label">Content (optional)</span>${UI.select('x',[{v:'',l:'None'},...CONTENT.map(c=>({v:c.id,l:c.title}))],'','100%').replace('data-filter="x"','id="tkContent"')}</div>
-      <div class="field"><span class="label">Assignee</span>${UI.select('x',TEAM.map(t=>({v:t.id,l:t.name})),ME.id,'100%').replace('data-filter="x"','id="tkAssignee"')}</div>
-      <div class="field"><span class="label">Department</span>${UI.select('x',DEPTS,'Production','100%').replace('data-filter="x"','id="tkDept"')}</div>
-      <div class="field"><span class="label">Priority</span>${UI.select('x',['Critical','High','Medium','Low'],'Medium','100%').replace('data-filter="x"','id="tkPrio"')}</div>
-      <div class="field"><span class="label">Due date</span><input class="input" type="date" id="tkDue" value="${iso(new Date(TODAY.getTime()+3*864e5))}"></div>
-      <div class="field"><span class="label">Hours estimate</span><input class="input" id="tkHours" type="number" value="2" step="0.5"></div>
+      <div class="field" style="grid-column:1/-1"><span class="label">Title</span><input class="input" id="tkTitle" placeholder="What needs to happen" value="${t?esc(t.title):''}"></div>
+      <div class="field"><span class="label">Content (optional)</span>${UI.select('x',[{v:'',l:'None'},...CONTENT.map(c=>({v:c.id,l:c.title}))],t?t.content:'','100%').replace('data-filter="x"','id="tkContent"')}</div>
+      <div class="field"><span class="label">Assignee</span>${UI.select('x',TEAM.map(x=>({v:x.id,l:x.name})),t?t.assignee:ME.id,'100%').replace('data-filter="x"','id="tkAssignee"')}</div>
+      <div class="field"><span class="label">Department</span>${UI.select('x',DEPTS,t?t.dept:'Production','100%').replace('data-filter="x"','id="tkDept"')}</div>
+      <div class="field"><span class="label">Priority</span>${UI.select('x',['Critical','High','Medium','Low'],t?t.priority:'Medium','100%').replace('data-filter="x"','id="tkPrio"')}</div>
+      <div class="field"><span class="label">Due date</span><input class="input" type="date" id="tkDue" value="${t?t.due:iso(new Date(TODAY.getTime()+3*864e5))}"></div>
+      <div class="field"><span class="label">Hours estimate</span><input class="input" id="tkHours" type="number" value="${t?t.hours:2}" step="0.5"></div>
     </div>`,
-    foot:`<button class="btn" data-close="1">Cancel</button><button class="btn btn-primary" data-act="save-task">Create task</button>`});
+    foot:`<button class="btn" data-close="1">Cancel</button><button class="btn btn-primary" data-act="save-task" data-id="${editId||''}">${t?'Save changes':'Create task'}</button>`});
 }
-function saveTask(){
+function saveTask(editId){
   const title=$('#tkTitle').value.trim()||'Untitled task';
+  if(editId){
+    const t=TASKS.find(x=>x.id===editId); if(!t) return;
+    Object.assign(t,{title,content:$('#tkContent').value||'',assignee:$('#tkAssignee').value,due:$('#tkDue').value,
+      priority:$('#tkPrio').value,dept:$('#tkDept').value,hours:+$('#tkHours').value||0});
+    t.overdue = t.status!=='Done' && daysFrom(t.due)<0;
+    persistTask(t);
+    logActivity({id:newId('LOG'),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),
+      who:ME.id,what:'edited task',ref:editId,label:title,type:'Task'});
+    closeLayers(); render(); toast('Saved changes — '+title,'check');
+    return;
+  }
   const id=newId('TSK');
   const t={id,title,content:$('#tkContent').value||'',assignee:$('#tkAssignee').value,due:$('#tkDue').value,
     status:'To do',priority:$('#tkPrio').value,dept:$('#tkDept').value,hours:+$('#tkHours').value||0};
@@ -3482,24 +3533,38 @@ function saveTask(){
   closeLayers(); go('tasks'); toast('Created task — '+title,'plus');
 }
 
-function newExpenseModal(){
-  openModal({title:'Record expense', sub:'Flows straight into the Expenses ledger and monthly totals.',
+function newExpenseModal(editId){
+  const e = editId ? EXPENSES.find(x=>x.id===editId) : null;
+  openModal({title: e?'Edit expense':'Record expense', sub:'Flows straight into the Expenses ledger and monthly totals.',
     body:`<div class="grid g-2">
-      <div class="field" style="grid-column:1/-1"><span class="label">Description</span><input class="input" id="exDesc" placeholder="What was paid for"></div>
-      <div class="field"><span class="label">Vendor</span><input class="input" id="exVendor" placeholder="Who was paid"></div>
-      <div class="field"><span class="label">Category</span>${UI.select('x',EXPENSE_CATS,'Production','100%').replace('data-filter="x"','id="exCat"')}</div>
-      <div class="field"><span class="label">Amount</span><input class="input" id="exAmount" type="number" value="1000" step="100"></div>
-      <div class="field"><span class="label">Date</span><input class="input" type="date" id="exDate" value="${iso(TODAY)}"></div>
-      <div class="field"><span class="label">Method</span>${UI.select('x',['Cash','Bank transfer','Credit card','GCash'],'Cash','100%').replace('data-filter="x"','id="exMethod"')}</div>
-      <div class="field"><span class="label">Department</span>${UI.select('x',DEPTS,'Production','100%').replace('data-filter="x"','id="exDept"')}</div>
-      <div class="field"><span class="label">Campaign (optional)</span>${UI.select('x',[{v:'',l:'None'},...CAMPAIGNS.map(c=>({v:c.id,l:c.name}))],'','100%').replace('data-filter="x"','id="exCmp"')}</div>
-      <div class="field"><span class="label">Recurrence</span>${UI.select('x',['One-time','Recurring'],'One-time','100%').replace('data-filter="x"','id="exRec"')}</div>
-      <div class="field"><span class="label">Approval</span>${UI.select('x',['Pending','Approved'],'Pending','100%').replace('data-filter="x"','id="exAppr"')}</div>
+      <div class="field" style="grid-column:1/-1"><span class="label">Description</span><input class="input" id="exDesc" placeholder="What was paid for" value="${e?esc(e.description):''}"></div>
+      <div class="field"><span class="label">Vendor</span><input class="input" id="exVendor" placeholder="Who was paid" value="${e?esc(e.vendor):''}"></div>
+      <div class="field"><span class="label">Category</span>${UI.select('x',EXPENSE_CATS,e?e.category:'Production','100%').replace('data-filter="x"','id="exCat"')}</div>
+      <div class="field"><span class="label">Amount</span><input class="input" id="exAmount" type="number" value="${e?e.amount:1000}" step="100"></div>
+      <div class="field"><span class="label">Date</span><input class="input" type="date" id="exDate" value="${e?e.date:iso(TODAY)}"></div>
+      <div class="field"><span class="label">Method</span>${UI.select('x',['Cash','Bank transfer','Credit card','GCash'],e?e.method:'Cash','100%').replace('data-filter="x"','id="exMethod"')}</div>
+      <div class="field"><span class="label">Department</span>${UI.select('x',DEPTS,e?e.dept:'Production','100%').replace('data-filter="x"','id="exDept"')}</div>
+      <div class="field"><span class="label">Campaign (optional)</span>${UI.select('x',[{v:'',l:'None'},...CAMPAIGNS.map(c=>({v:c.id,l:c.name}))],e?e.campaign:'','100%').replace('data-filter="x"','id="exCmp"')}</div>
+      <div class="field"><span class="label">Recurrence</span>${UI.select('x',['One-time','Recurring'],e?e.recurrence:'One-time','100%').replace('data-filter="x"','id="exRec"')}</div>
+      <div class="field"><span class="label">Approval</span>${UI.select('x',['Pending','Approved'],e?e.approval:'Pending','100%').replace('data-filter="x"','id="exAppr"')}</div>
     </div>`,
-    foot:`<button class="btn" data-close="1">Cancel</button><button class="btn btn-primary" data-act="save-expense">Save expense</button>`});
+    foot:`<button class="btn" data-close="1">Cancel</button><button class="btn btn-primary" data-act="save-expense" data-id="${editId||''}">${e?'Save changes':'Save expense'}</button>`});
 }
-function saveExpense(){
-  const id=newId('EXP'), date=$('#exDate').value;
+function saveExpense(editId){
+  const date=$('#exDate').value;
+  if(editId){
+    const e=EXPENSES.find(x=>x.id===editId); if(!e) return;
+    Object.assign(e,{date,category:$('#exCat').value,vendor:$('#exVendor').value.trim(),description:$('#exDesc').value.trim()||'Untitled expense',
+      amount:+$('#exAmount').value||0,method:$('#exMethod').value,dept:$('#exDept').value,campaign:$('#exCmp').value||'',
+      recurrence:$('#exRec').value,approval:$('#exAppr').value});
+    e.month=date.slice(0,7); e.direct=EXPENSE_CATS.slice(0,4).includes(e.category);
+    persistExpense(e);
+    logActivity({id:newId('LOG'),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),
+      who:ME.id,what:'edited expense',ref:editId,label:e.description,type:'Expense'});
+    closeLayers(); render(); toast('Saved changes','check');
+    return;
+  }
+  const id=newId('EXP');
   const e={id,date,category:$('#exCat').value,vendor:$('#exVendor').value.trim(),description:$('#exDesc').value.trim()||'Untitled expense',
     amount:+$('#exAmount').value||0,method:$('#exMethod').value,dept:$('#exDept').value,campaign:$('#exCmp').value||'',
     content:'',recurrence:$('#exRec').value,approval:$('#exAppr').value};
@@ -3510,22 +3575,35 @@ function saveExpense(){
   closeLayers(); go('expenses'); toast('Recorded expense — '+F.peso(e.amount),'plus');
 }
 
-function newRevenueModal(){
-  openModal({title:'Record revenue', sub:'Flows straight into the Revenue ledger and monthly totals.',
+function newRevenueModal(editId){
+  const r = editId ? REVENUE.find(x=>x.id===editId) : null;
+  openModal({title: r?'Edit revenue':'Record revenue', sub:'Flows straight into the Revenue ledger and monthly totals.',
     body:`<div class="grid g-2">
-      <div class="field" style="grid-column:1/-1"><span class="label">Client</span><input class="input" id="rvClient" placeholder="Who paid"></div>
-      <div class="field"><span class="label">Source</span>${UI.select('x',REVENUE_SOURCES,'Brand deal','100%').replace('data-filter="x"','id="rvSource"')}</div>
-      <div class="field"><span class="label">Platform</span>${UI.select('x',PLATFORMS.map(p=>({v:p.id,l:p.name})),PLATFORMS[0].id,'100%').replace('data-filter="x"','id="rvPlat"')}</div>
-      <div class="field"><span class="label">Amount</span><input class="input" id="rvAmount" type="number" value="5000" step="500"></div>
-      <div class="field"><span class="label">Date</span><input class="input" type="date" id="rvDate" value="${iso(TODAY)}"></div>
-      <div class="field"><span class="label">Status</span>${UI.select('x',['Pending','Invoiced','Partially paid','Paid','Overdue','Cancelled'],'Pending','100%').replace('data-filter="x"','id="rvStatus"')}</div>
-      <div class="field"><span class="label">Campaign (optional)</span>${UI.select('x',[{v:'',l:'None'},...CAMPAIGNS.map(c=>({v:c.id,l:c.name}))],'','100%').replace('data-filter="x"','id="rvCmp"')}</div>
-      <div class="field"><span class="label">Invoice #</span><input class="input" id="rvInvoice" placeholder="Optional"></div>
+      <div class="field" style="grid-column:1/-1"><span class="label">Client</span><input class="input" id="rvClient" placeholder="Who paid" value="${r?esc(r.client):''}"></div>
+      <div class="field"><span class="label">Source</span>${UI.select('x',REVENUE_SOURCES,r?r.source:'Brand deal','100%').replace('data-filter="x"','id="rvSource"')}</div>
+      <div class="field"><span class="label">Platform</span>${UI.select('x',PLATFORMS.map(p=>({v:p.id,l:p.name})),r?r.platform:PLATFORMS[0].id,'100%').replace('data-filter="x"','id="rvPlat"')}</div>
+      <div class="field"><span class="label">Amount</span><input class="input" id="rvAmount" type="number" value="${r?r.amount:5000}" step="500"></div>
+      <div class="field"><span class="label">Date</span><input class="input" type="date" id="rvDate" value="${r?r.date:iso(TODAY)}"></div>
+      <div class="field"><span class="label">Status</span>${UI.select('x',['Pending','Invoiced','Partially paid','Paid','Overdue','Cancelled'],r?r.status:'Pending','100%').replace('data-filter="x"','id="rvStatus"')}</div>
+      <div class="field"><span class="label">Campaign (optional)</span>${UI.select('x',[{v:'',l:'None'},...CAMPAIGNS.map(c=>({v:c.id,l:c.name}))],r?r.campaign:'','100%').replace('data-filter="x"','id="rvCmp"')}</div>
+      <div class="field"><span class="label">Invoice #</span><input class="input" id="rvInvoice" placeholder="Optional" value="${r?esc(r.invoice):''}"></div>
     </div>`,
-    foot:`<button class="btn" data-close="1">Cancel</button><button class="btn btn-primary" data-act="save-revenue">Save revenue</button>`});
+    foot:`<button class="btn" data-close="1">Cancel</button><button class="btn btn-primary" data-act="save-revenue" data-id="${editId||''}">${r?'Save changes':'Save revenue'}</button>`});
 }
-function saveRevenue(){
-  const id=newId('REV'), date=$('#rvDate').value;
+function saveRevenue(editId){
+  const date=$('#rvDate').value;
+  if(editId){
+    const r=REVENUE.find(x=>x.id===editId); if(!r) return;
+    Object.assign(r,{date,source:$('#rvSource').value,client:$('#rvClient').value.trim()||'Unnamed client',campaign:$('#rvCmp').value||'',
+      platform:$('#rvPlat').value,amount:+$('#rvAmount').value||0,status:$('#rvStatus').value,invoice:$('#rvInvoice').value.trim()});
+    r.month=date.slice(0,7);
+    persistRevenue(r);
+    logActivity({id:newId('LOG'),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),
+      who:ME.id,what:'edited revenue entry',ref:editId,label:r.client,type:'Revenue'});
+    closeLayers(); render(); toast('Saved changes','check');
+    return;
+  }
+  const id=newId('REV');
   const r={id,date,source:$('#rvSource').value,client:$('#rvClient').value.trim()||'Unnamed client',campaign:$('#rvCmp').value||'',
     content:'',platform:$('#rvPlat').value,amount:+$('#rvAmount').value||0,status:$('#rvStatus').value,invoice:$('#rvInvoice').value.trim()};
   r.month=date.slice(0,7);
@@ -3535,20 +3613,32 @@ function saveRevenue(){
   closeLayers(); go('revenue'); toast('Recorded revenue — '+F.peso(r.amount),'plus');
 }
 
-function newBudgetModal(){
-  openModal({title:'Create budget', sub:'A spending ceiling the system tracks against.',
+function newBudgetModal(editId){
+  const b = editId ? BUDGETS.find(x=>x.id===editId) : null;
+  openModal({title: b?'Edit budget':'Create budget', sub:'A spending ceiling the system tracks against.',
     body:`<div class="grid g-2">
-      <div class="field" style="grid-column:1/-1"><span class="label">Name</span><input class="input" id="bgName" placeholder="e.g. September operating"></div>
-      <div class="field"><span class="label">Type</span>${UI.select('x',['Monthly','Quarterly','Campaign'],'Monthly','100%').replace('data-filter="x"','id="bgType"')}</div>
-      <div class="field"><span class="label">Period</span><input class="input" id="bgPeriod" placeholder="e.g. Sep 2026" value="${MONTHS[S.month]} ${YEAR()}"></div>
-      <div class="field"><span class="label">Budget amount</span><input class="input" id="bgBudget" type="number" value="20000" step="1000"></div>
-      <div class="field"><span class="label">Actual spent so far</span><input class="input" id="bgActual" type="number" value="0" step="500"></div>
-      <div class="field"><span class="label">Department</span>${UI.select('x',DEPTS,'Operations','100%').replace('data-filter="x"','id="bgDept"')}</div>
+      <div class="field" style="grid-column:1/-1"><span class="label">Name</span><input class="input" id="bgName" placeholder="e.g. September operating" value="${b?esc(b.name):''}"></div>
+      <div class="field"><span class="label">Type</span>${UI.select('x',['Monthly','Quarterly','Campaign'],b?b.type:'Monthly','100%').replace('data-filter="x"','id="bgType"')}</div>
+      <div class="field"><span class="label">Period</span><input class="input" id="bgPeriod" placeholder="e.g. Sep 2026" value="${b?esc(b.period):MONTHS[S.month]+' '+YEAR()}"></div>
+      <div class="field"><span class="label">Budget amount</span><input class="input" id="bgBudget" type="number" value="${b?b.budget:20000}" step="1000"></div>
+      <div class="field"><span class="label">Actual spent so far</span><input class="input" id="bgActual" type="number" value="${b?b.actual:0}" step="500"></div>
+      <div class="field"><span class="label">Department</span>${UI.select('x',DEPTS,b?b.dept:'Operations','100%').replace('data-filter="x"','id="bgDept"')}</div>
     </div>`,
-    foot:`<button class="btn" data-close="1">Cancel</button><button class="btn btn-primary" data-act="save-budget">Create budget</button>`});
+    foot:`<button class="btn" data-close="1">Cancel</button><button class="btn btn-primary" data-act="save-budget" data-id="${editId||''}">${b?'Save changes':'Create budget'}</button>`});
 }
-function saveBudget(){
+function saveBudget(editId){
   const name=$('#bgName').value.trim()||'Untitled budget';
+  if(editId){
+    const b=BUDGETS.find(x=>x.id===editId); if(!b) return;
+    Object.assign(b,{name,type:$('#bgType').value,period:$('#bgPeriod').value,budget:+$('#bgBudget').value||0,
+      actual:+$('#bgActual').value||0,dept:$('#bgDept').value});
+    b.remaining=b.budget-b.actual; b.util=b.budget? b.actual/b.budget*100:0;
+    persistBudget(b);
+    logActivity({id:newId('LOG'),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),
+      who:ME.id,what:'edited budget',ref:editId,label:name,type:'Budget'});
+    closeLayers(); render(); toast('Saved changes — '+name,'check');
+    return;
+  }
   const id=newId('BUD');
   const b={id,name,type:$('#bgType').value,period:$('#bgPeriod').value,budget:+$('#bgBudget').value||0,actual:+$('#bgActual').value||0,dept:$('#bgDept').value};
   b.remaining=b.budget-b.actual; b.util=b.budget? b.actual/b.budget*100:0;
@@ -3558,20 +3648,33 @@ function saveBudget(){
   closeLayers(); go('budget'); toast('Created budget — '+name,'plus');
 }
 
-function newGoalModal(){
-  openModal({title:'Set a target', sub:'A KPI the dashboard tracks month to month.',
+function newGoalModal(editId){
+  const g = editId ? GOALS.find(x=>x.id===editId) : null;
+  openModal({title: g?'Edit target':'Set a target', sub:'A KPI the dashboard tracks month to month.',
     body:`<div class="grid g-2">
-      <div class="field" style="grid-column:1/-1"><span class="label">Name</span><input class="input" id="glName" placeholder="e.g. Monthly revenue"></div>
-      <div class="field"><span class="label">Owner</span>${UI.select('x',TEAM.map(t=>({v:t.id,l:t.name})),ME.id,'100%').replace('data-filter="x"','id="glOwner"')}</div>
-      <div class="field"><span class="label">Format</span>${UI.select('x',[{v:'peso',l:'Peso (₱)'},{v:'num',l:'Number'},{v:'numK',l:'Number (k/M)'},{v:'pct',l:'Percent'}],'peso','100%').replace('data-filter="x"','id="glFmt"')}</div>
-      <div class="field"><span class="label">Target</span><input class="input" id="glTarget" type="number" value="100000" step="1000"></div>
-      <div class="field"><span class="label">Actual so far</span><input class="input" id="glActual" type="number" value="0" step="1000"></div>
-      <div class="field"><span class="label">Lower is better?</span>${UI.select('x',[{v:'0',l:'No — higher is better'},{v:'1',l:'Yes — lower is better'}],'0','100%').replace('data-filter="x"','id="glInverse"')}</div>
+      <div class="field" style="grid-column:1/-1"><span class="label">Name</span><input class="input" id="glName" placeholder="e.g. Monthly revenue" value="${g?esc(g.name):''}"></div>
+      <div class="field"><span class="label">Owner</span>${UI.select('x',TEAM.map(t=>({v:t.id,l:t.name})),g?g.owner:ME.id,'100%').replace('data-filter="x"','id="glOwner"')}</div>
+      <div class="field"><span class="label">Format</span>${UI.select('x',[{v:'peso',l:'Peso (₱)'},{v:'num',l:'Number'},{v:'numK',l:'Number (k/M)'},{v:'pct',l:'Percent'}],g?g.fmt:'peso','100%').replace('data-filter="x"','id="glFmt"')}</div>
+      <div class="field"><span class="label">Target</span><input class="input" id="glTarget" type="number" value="${g?g.target:100000}" step="1000"></div>
+      <div class="field"><span class="label">Actual so far</span><input class="input" id="glActual" type="number" value="${g?g.actual:0}" step="1000"></div>
+      <div class="field"><span class="label">Lower is better?</span>${UI.select('x',[{v:'0',l:'No — higher is better'},{v:'1',l:'Yes — lower is better'}],g?(g.inverse?'1':'0'):'0','100%').replace('data-filter="x"','id="glInverse"')}</div>
     </div>`,
-    foot:`<button class="btn" data-close="1">Cancel</button><button class="btn btn-primary" data-act="save-goal">Set target</button>`});
+    foot:`<button class="btn" data-close="1">Cancel</button><button class="btn btn-primary" data-act="save-goal" data-id="${editId||''}">${g?'Save changes':'Set target'}</button>`});
 }
-function saveGoal(){
+function saveGoal(editId){
   const name=$('#glName').value.trim()||'Untitled target';
+  if(editId){
+    const g=GOALS.find(x=>x.id===editId); if(!g) return;
+    Object.assign(g,{name,owner:$('#glOwner').value,target:+$('#glTarget').value||0,actual:+$('#glActual').value||0,
+      fmt:$('#glFmt').value,inverse:$('#glInverse').value==='1'});
+    g.pct = g.inverse ? (g.actual? g.target/g.actual*100:0) : (g.target? g.actual/g.target*100:0);
+    g.variance = g.inverse ? g.target-g.actual : g.actual-g.target;
+    persistGoal(g);
+    logActivity({id:newId('LOG'),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),
+      who:ME.id,what:'edited target',ref:editId,label:name,type:'Goal'});
+    closeLayers(); render(); toast('Saved changes — '+name,'check');
+    return;
+  }
   const id=newId('GOAL');
   const g={id,name,owner:$('#glOwner').value,target:+$('#glTarget').value||0,actual:+$('#glActual').value||0,
     fmt:$('#glFmt').value,inverse:$('#glInverse').value==='1'};
@@ -3583,20 +3686,31 @@ function saveGoal(){
   closeLayers(); go('goals'); toast('Set target — '+name,'plus');
 }
 
-function newAssetModal(){
-  openModal({title:'Add asset', sub:'Registers the file in the library with version tracking.',
+function newAssetModal(editId){
+  const a = editId ? ASSETS.find(x=>x.id===editId) : null;
+  openModal({title: a?'Edit asset':'Add asset', sub:'Registers the file in the library with version tracking.',
     body:`<div class="grid g-2">
-      <div class="field" style="grid-column:1/-1"><span class="label">File name</span><input class="input" id="asName" placeholder="e.g. Hero_shot_v1.mp4"></div>
-      <div class="field"><span class="label">Type</span>${UI.select('x',ASSET_TYPES,'Video','100%').replace('data-filter="x"','id="asType"')}</div>
-      <div class="field"><span class="label">Creator</span>${UI.select('x',TEAM.map(t=>({v:t.id,l:t.name})),ME.id,'100%').replace('data-filter="x"','id="asCreator"')}</div>
-      <div class="field"><span class="label">Linked content (optional)</span>${UI.select('x',[{v:'',l:'None'},...CONTENT.map(c=>({v:c.id,l:c.title}))],'','100%').replace('data-filter="x"','id="asContent"')}</div>
-      <div class="field"><span class="label">Campaign (optional)</span>${UI.select('x',[{v:'',l:'None'},...CAMPAIGNS.map(c=>({v:c.id,l:c.name}))],'','100%').replace('data-filter="x"','id="asCmp"')}</div>
-      <div class="field" style="grid-column:1/-1"><span class="label">Tags</span><input class="input" id="asTags" placeholder="comma, separated, tags"></div>
+      <div class="field" style="grid-column:1/-1"><span class="label">File name</span><input class="input" id="asName" placeholder="e.g. Hero_shot_v1.mp4" value="${a?esc(a.name):''}"></div>
+      <div class="field"><span class="label">Type</span>${UI.select('x',ASSET_TYPES,a?a.type:'Video','100%').replace('data-filter="x"','id="asType"')}</div>
+      <div class="field"><span class="label">Creator</span>${UI.select('x',TEAM.map(t=>({v:t.id,l:t.name})),a?a.creator:ME.id,'100%').replace('data-filter="x"','id="asCreator"')}</div>
+      <div class="field"><span class="label">Linked content (optional)</span>${UI.select('x',[{v:'',l:'None'},...CONTENT.map(c=>({v:c.id,l:c.title}))],a?a.content:'','100%').replace('data-filter="x"','id="asContent"')}</div>
+      <div class="field"><span class="label">Campaign (optional)</span>${UI.select('x',[{v:'',l:'None'},...CAMPAIGNS.map(c=>({v:c.id,l:c.name}))],a?a.campaign:'','100%').replace('data-filter="x"','id="asCmp"')}</div>
+      <div class="field" style="grid-column:1/-1"><span class="label">Tags</span><input class="input" id="asTags" placeholder="comma, separated, tags" value="${a?esc(a.tags):''}"></div>
     </div>`,
-    foot:`<button class="btn" data-close="1">Cancel</button><button class="btn btn-primary" data-act="save-asset">Add asset</button>`});
+    foot:`<button class="btn" data-close="1">Cancel</button><button class="btn btn-primary" data-act="save-asset" data-id="${editId||''}">${a?'Save changes':'Add asset'}</button>`});
 }
-function saveAsset(){
+function saveAsset(editId){
   const name=$('#asName').value.trim()||'Untitled asset';
+  if(editId){
+    const a=ASSETS.find(x=>x.id===editId); if(!a) return;
+    Object.assign(a,{name,type:$('#asType').value,content:$('#asContent').value||'',campaign:$('#asCmp').value||'',
+      creator:$('#asCreator').value,tags:$('#asTags').value.trim()});
+    persistAsset(a);
+    logActivity({id:newId('LOG'),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),
+      who:ME.id,what:'edited asset',ref:editId,label:name,type:'Asset'});
+    closeLayers(); render(); if($('.drawer')) openDetail('asset',editId); toast('Saved changes — '+name,'check');
+    return;
+  }
   const id=newId('AST');
   const a={id,name,type:$('#asType').value,content:$('#asContent').value||'',campaign:$('#asCmp').value||'',
     creator:$('#asCreator').value,date:iso(TODAY),version:1,status:'Draft',tags:$('#asTags').value.trim()};
@@ -3606,21 +3720,33 @@ function saveAsset(){
   closeLayers(); go('library'); toast('Added asset — '+name,'plus');
 }
 
-function newScheduleModal(){
+function newScheduleModal(editId){
   if(!CONTENT.length){ toast('Create content first — a scheduled post needs to link to something','alert'); return; }
-  openModal({title:'Schedule a post', sub:'Queues the content for publishing on a platform and account.',
+  const p = editId ? PUBLISHING.find(x=>x.id===editId) : null;
+  openModal({title: p?'Edit publishing record':'Schedule a post', sub:'Queues the content for publishing on a platform and account.',
     body:`<div class="grid g-2">
-      <div class="field" style="grid-column:1/-1"><span class="label">Content</span>${UI.select('x',CONTENT.map(c=>({v:c.id,l:c.title})),CONTENT[0].id,'100%').replace('data-filter="x"','id="scContent"')}</div>
-      <div class="field"><span class="label">Platform</span>${UI.select('x',PLATFORMS.map(p=>({v:p.id,l:p.name})),PLATFORMS[0].id,'100%').replace('data-filter="x"','id="scPlat"')}</div>
-      <div class="field"><span class="label">Account handle</span><input class="input" id="scAccount" placeholder="@handle"></div>
-      <div class="field"><span class="label">Date</span><input class="input" type="date" id="scDate" value="${iso(new Date(TODAY.getTime()+864e5))}"></div>
-      <div class="field"><span class="label">Time</span><input class="input" type="time" id="scTime" value="12:00"></div>
-      <div class="field" style="grid-column:1/-1"><span class="label">Hashtags</span><input class="input" id="scTags" placeholder="#tag1 #tag2"></div>
+      <div class="field" style="grid-column:1/-1"><span class="label">Content</span>${UI.select('x',CONTENT.map(c=>({v:c.id,l:c.title})),p?p.content:CONTENT[0].id,'100%').replace('data-filter="x"','id="scContent"')}</div>
+      <div class="field"><span class="label">Platform</span>${UI.select('x',PLATFORMS.map(pl=>({v:pl.id,l:pl.name})),p?p.platform:PLATFORMS[0].id,'100%').replace('data-filter="x"','id="scPlat"')}</div>
+      <div class="field"><span class="label">Account handle</span><input class="input" id="scAccount" placeholder="@handle" value="${p?esc(p.account):''}"></div>
+      <div class="field"><span class="label">Date</span><input class="input" type="date" id="scDate" value="${p?p.date:iso(new Date(TODAY.getTime()+864e5))}"></div>
+      <div class="field"><span class="label">Time</span><input class="input" type="time" id="scTime" value="${p?p.time:'12:00'}"></div>
+      <div class="field" style="grid-column:1/-1"><span class="label">Hashtags</span><input class="input" id="scTags" placeholder="#tag1 #tag2" value="${p?esc(p.hashtags):''}"></div>
     </div>`,
-    foot:`<button class="btn" data-close="1">Cancel</button><button class="btn btn-primary" data-act="save-schedule">Schedule</button>`});
+    foot:`<button class="btn" data-close="1">Cancel</button><button class="btn btn-primary" data-act="save-schedule" data-id="${editId||''}">${p?'Save changes':'Schedule'}</button>`});
 }
-function saveSchedule(){
-  const contentId=$('#scContent').value, id=newId('PUB');
+function saveSchedule(editId){
+  const contentId=$('#scContent').value;
+  if(editId){
+    const p=PUBLISHING.find(x=>x.id===editId); if(!p) return;
+    Object.assign(p,{content:contentId,platform:$('#scPlat').value,account:$('#scAccount').value.trim(),
+      date:$('#scDate').value,time:$('#scTime').value,hashtags:$('#scTags').value.trim()});
+    persistPublishing(p);
+    logActivity({id:newId('LOG'),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),
+      who:ME.id,what:'edited publishing record',ref:editId,label:CT[contentId]?CT[contentId].title:contentId,type:'Publishing'});
+    closeLayers(); render(); toast('Saved changes','check');
+    return;
+  }
+  const id=newId('PUB');
   const p={id,content:contentId,platform:$('#scPlat').value,account:$('#scAccount').value.trim(),
     date:$('#scDate').value,time:$('#scTime').value,status:'Scheduled',url:'',hashtags:$('#scTags').value.trim()};
   PUBLISHING.push(p); persistPublishing(p);
@@ -3659,29 +3785,42 @@ document.addEventListener('click',e=>{
   if(w){ const k=w.dataset.widget; S.widgets[k]=!S.widgets[k]; w.classList.toggle('on',!!S.widgets[k]); }
 });
 
-function inviteUserModal(){
-  openModal({title:'Invite someone', sub:'They become both a team member and an account.',
+function inviteUserModal(editId){
+  const t = editId ? MEM[editId] : null;
+  openModal({title: t?'Edit team member':'Invite someone', sub: t?'Updates their record — access level stays managed from the table.':'They become both a team member and an account.',
     body:`<div class="grid g-2">
       <div class="field"><span class="label">Full name</span>
-        <input class="input" id="iuName" placeholder="e.g. Maria Santos" style="width:100%"></div>
+        <input class="input" id="iuName" placeholder="e.g. Maria Santos" style="width:100%" value="${t?esc(t.name):''}"></div>
       <div class="field"><span class="label">Email</span>
-        <input class="input" id="iuEmail" type="email" placeholder="name@atrium.ph" style="width:100%"></div>
+        <input class="input" id="iuEmail" type="email" placeholder="name@atrium.ph" style="width:100%" value="${t?esc(t.email):''}"></div>
       <div class="field"><span class="label">Job title</span>
-        <input class="input" id="iuTitle" placeholder="e.g. Video Editor" style="width:100%"></div>
+        <input class="input" id="iuTitle" placeholder="e.g. Video Editor" style="width:100%" value="${t?esc(t.role):''}"></div>
       <div class="field"><span class="label">Department</span>
-        ${UI.select('x',DEPTS,'Production','100%').replace('data-filter="x"','id="iuDept"')}</div>
-      <div class="field"><span class="label">Access level</span>
-        ${UI.select('x',ROLES.filter(r=>r.id!=='owner').map(r=>({v:r.id,l:r.name})),'creator','100%').replace('data-filter="x"','id="iuAccess"')}</div>
+        ${UI.select('x',DEPTS,t?t.dept:'Production','100%').replace('data-filter="x"','id="iuDept"')}</div>
+      ${t?'':`<div class="field"><span class="label">Access level</span>
+        ${UI.select('x',ROLES.filter(r=>r.id!=='owner').map(r=>({v:r.id,l:r.name})),'creator','100%').replace('data-filter="x"','id="iuAccess"')}</div>`}
       <div class="field"><span class="label">Weekly capacity</span>
-        <input class="input" id="iuCap" type="number" value="40" step="5" style="width:100%"></div>
+        <input class="input" id="iuCap" type="number" value="${t?t.capacity:40}" step="5" style="width:100%"></div>
     </div>
-    <div class="note info mt-l">Owner is not on the list on purpose — there is only ever one, and handing it over is a separate, deliberate step.</div>`,
+    ${t?'':`<div class="note info mt-l">Owner is not on the list on purpose — there is only ever one, and handing it over is a separate, deliberate step.</div>`}`,
     foot:`<button class="btn" data-close="1">Cancel</button>
-      <button class="btn btn-primary" data-act="save-user">Send invite</button>`});
+      <button class="btn btn-primary" data-act="save-user" data-id="${editId||''}">${t?'Save changes':'Send invite'}</button>`});
 }
-function saveUser(){
+function saveUser(editId){
   const name=($('#iuName')?$('#iuName').value.trim():'')||'Unnamed person';
   const cap=+($('#iuCap')?$('#iuCap').value:40)||0;
+  if(editId){
+    const t=MEM[editId]; if(!t) return;
+    Object.assign(t,{name, role:($('#iuTitle')?$('#iuTitle').value.trim():'')||'Team member',
+      dept:$('#iuDept')?$('#iuDept').value:t.dept, email:($('#iuEmail')?$('#iuEmail').value.trim():''),
+      capacity:cap, initials:F.initials(name)});
+    t.load = t.capacity? Math.round(t.allocated/t.capacity*100):0;
+    persistTeam(t);
+    logActivity({id:newId('LOG'), date:iso(TODAY), time:new Date().toTimeString().slice(0,5),
+      who:ME.id, what:'edited the profile of', ref:editId, label:name, type:'Access'});
+    closeLayers(); render(); toast('Saved changes — '+name,'check');
+    return;
+  }
   const id='tm'+(TEAM.length+1)+Date.now().toString(36).slice(-3);
   const palette=['#3A5A8C','#6A4BC4','#0E7C4F','#9A6700','#C0392B','#2F6E8F','#7A4F2A','#8A3C6B'];
   const t={id, name,
@@ -3703,34 +3842,46 @@ function saveUser(){
   toast('Invited '+name+' as '+roleName(t.access),'plus');
 }
 
-function newContentModal(){
-  openModal({title:'New content', sub:'This writes a real record — it appears on the board, in costs and in reports.',
+function newContentModal(editId){
+  const c = editId ? CT[editId] : null;
+  openModal({title: c?'Edit content':'New content', sub:'This writes a real record — it appears on the board, in costs and in reports.',
     body:`<div class="grid g-2">
       <div class="field" style="grid-column:1/-1"><span class="label">Title</span>
-        <input class="input" id="ncTitle" placeholder="e.g. Chicken Barbecue, Three Marinades"></div>
+        <input class="input" id="ncTitle" placeholder="e.g. Chicken Barbecue, Three Marinades" value="${c?esc(c.title):''}"></div>
       <div class="field"><span class="label">Content type</span>
-        ${UI.select('x',uniq(CONTENT.map(c=>c.type)),'Short-form video','100%').replace('data-filter="x"','id="ncType"')}</div>
+        ${UI.select('x',uniq(CONTENT.map(x=>x.type)),c?c.type:'Short-form video','100%').replace('data-filter="x"','id="ncType"')}</div>
       <div class="field"><span class="label">Category</span>
-        ${UI.select('x',uniq(CONTENT.map(c=>c.category)),'Recipe','100%').replace('data-filter="x"','id="ncCat"')}</div>
+        ${UI.select('x',uniq(CONTENT.map(x=>x.category)),c?c.category:'Recipe','100%').replace('data-filter="x"','id="ncCat"')}</div>
       <div class="field"><span class="label">Platform</span>
-        ${UI.select('x',PLATFORMS.map(p=>({v:p.id,l:p.name})),'tiktok','100%').replace('data-filter="x"','id="ncPlat"')}</div>
+        ${UI.select('x',PLATFORMS.map(p=>({v:p.id,l:p.name})),c?c.platform:'tiktok','100%').replace('data-filter="x"','id="ncPlat"')}</div>
       <div class="field"><span class="label">Campaign</span>
-        ${UI.select('x',CAMPAIGNS.map(c=>({v:c.id,l:c.name})),'cmp2','100%').replace('data-filter="x"','id="ncCmp"')}</div>
+        ${UI.select('x',CAMPAIGNS.map(x=>({v:x.id,l:x.name})),c?c.campaign:(CAMPAIGNS[0]?CAMPAIGNS[0].id:''),'100%').replace('data-filter="x"','id="ncCmp"')}</div>
       <div class="field"><span class="label">Owner</span>
-        ${UI.select('x',TEAM.map(t=>({v:t.id,l:t.name})),'tm4','100%').replace('data-filter="x"','id="ncOwner"')}</div>
+        ${UI.select('x',TEAM.map(t=>({v:t.id,l:t.name})),c?c.owner:ME.id,'100%').replace('data-filter="x"','id="ncOwner"')}</div>
       <div class="field"><span class="label">Editor</span>
-        ${UI.select('x',TEAM.filter(t=>t.dept==='Post-production').map(t=>({v:t.id,l:t.name})),'tm3','100%').replace('data-filter="x"','id="ncEditor"')}</div>
+        ${UI.select('x',TEAM.map(t=>({v:t.id,l:t.name})),c?c.editor:ME.id,'100%').replace('data-filter="x"','id="ncEditor"')}</div>
       <div class="field"><span class="label">Priority</span>
-        ${UI.select('x',['Critical','High','Medium','Low'],'Medium','100%').replace('data-filter="x"','id="ncPrio"')}</div>
-      <div class="field"><span class="label">Deadline</span><input class="input" type="date" id="ncDue" value="${iso(new Date(TODAY.getTime()+14*864e5))}"></div>
+        ${UI.select('x',['Critical','High','Medium','Low'],c?c.priority:'Medium','100%').replace('data-filter="x"','id="ncPrio"')}</div>
+      <div class="field"><span class="label">Deadline</span><input class="input" type="date" id="ncDue" value="${c?c.deadline:iso(new Date(TODAY.getTime()+14*864e5))}"></div>
       <div class="field" style="grid-column:1/-1"><span class="label">Estimated production cost</span>
-        <input class="input" id="ncCost" type="number" value="5500" step="500"></div>
+        <input class="input" id="ncCost" type="number" value="${c?c.estCost:5500}" step="500"></div>
     </div>`,
     foot:`<button class="btn" data-close="1">Cancel</button>
-      <button class="btn btn-primary" data-act="save-content">Create content</button>`});
+      <button class="btn btn-primary" data-act="save-content" data-id="${editId||''}">${c?'Save changes':'Create content'}</button>`});
 }
-function saveContent(){
+function saveContent(editId){
   const title=$('#ncTitle').value.trim()||'Untitled content';
+  if(editId){
+    const c=CT[editId]; if(!c) return;
+    Object.assign(c,{title,type:$('#ncType').value,category:$('#ncCat').value,platform:$('#ncPlat').value,
+      campaign:$('#ncCmp').value,owner:$('#ncOwner').value,editor:$('#ncEditor').value,
+      priority:$('#ncPrio').value,deadline:$('#ncDue').value,estCost:+$('#ncCost').value||0});
+    persistContent(c);
+    logActivity({id:newId('LOG'),date:iso(TODAY),time:new Date().toTimeString().slice(0,5),
+      who:ME.id,what:'edited',ref:editId,label:title,type:'Content'});
+    closeLayers(); render(); if($('.drawer')) openDetail('content',editId); toast('Saved changes — '+title,'check');
+    return;
+  }
   const id='CNT-'+String(CONTENT.length+1).padStart(3,'0');
   const c={id,title,type:$('#ncType').value,category:$('#ncCat').value,platform:$('#ncPlat').value,
     campaign:$('#ncCmp').value,status:'Idea',owner:$('#ncOwner').value,editor:$('#ncEditor').value,

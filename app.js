@@ -294,7 +294,8 @@ function hydrateTeamRow(r){
   return {id:r.id, name:r.name, role:r.role, dept:r.dept, color:r.color||'#1D1D1F',
     done:0, onTime:100, turn:0, active:0, capacity:cap, allocated:alloc,
     joined:r.joined||'', initials:F.initials(r.name), email:r.email||'', access:r.access||'creator',
-    status:r.status||'Active', lastActive:r.last_active||'', load: cap?Math.round(alloc/cap*100):0};
+    status:r.status||'Active', lastActive:r.last_active||'', load: cap?Math.round(alloc/cap*100):0,
+    restrictedNav:r.restricted_nav||[]};
 }
 function newId(prefix){ return prefix+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,5); }
 function hydrateCampaignRow(r){
@@ -403,7 +404,8 @@ function persistContent(c){
 function persistTeam(t){
   if(!sb) return;
   sb.from('team').upsert({id:t.id,name:t.name,role:t.role,dept:t.dept,color:t.color,capacity:t.capacity,
-    allocated:t.allocated,joined:t.joined||null,email:t.email,access:t.access,status:t.status,last_active:t.lastActive})
+    allocated:t.allocated,joined:t.joined||null,email:t.email,access:t.access,status:t.status,last_active:t.lastActive,
+    restricted_nav:t.restrictedNav||[]})
     .then(({error})=>{ if(error) console.error('team save failed',error); });
 }
 function persistCampaign(c){
@@ -1033,6 +1035,7 @@ function pendingApprovals(){
     members: TEAM.filter(t=>t.status==='Invited')
   };
 }
+function canAccess(id){ return !(ME.restrictedNav||[]).includes(id); }
 function navCount(id){
   let c = null;
   if(id==='tasks'){ const n=overdueTasks().length; c = n?{n,alert:true}:{n:openTasks().length}; }
@@ -1044,13 +1047,16 @@ function navCount(id){
   return c && c.n ? c : null;        /* a badge with nothing to count is just noise */
 }
 function renderNav(){
-  $('#nav').innerHTML = NAV.map(g=>`<div class="nav-group">
+  $('#nav').innerHTML = NAV.map(g=>{
+    const items=g.items.filter(i=>canAccess(i.id));
+    if(!items.length) return '';
+    return `<div class="nav-group">
     <div class="nav-head">${esc(g.group)}</div>
-    ${g.items.map(i=>{ const c=navCount(i.id);
+    ${items.map(i=>{ const c=navCount(i.id);
       return `<button class="nav-item ${S.view===i.id?'active':''}" data-go="${i.id}">
         ${icon(i.icon,15)}<span class="truncate">${esc(i.label)}</span>
         ${c?`<span class="nav-count ${c.alert?'alert':''}">${c.n}</span>`:''}</button>`;}).join('')}
-  </div>`).join('');
+  </div>`;}).join('');
 }
 
 /* ============================================================
@@ -3109,6 +3115,10 @@ function render(){
 }
 function go(id){
   if(!V[id]) return;
+  if(!canAccess(id)){
+    try{ history.replaceState(null,'','#/'+S.view); }catch(e){}
+    toast('You don’t have access to that section','lock'); return;
+  }
   S.view=id; S.navOpen=false; $('#app').classList.remove('nav-open');
   /* sandboxed previews block History; navigation must not depend on it */
   try{ if(location.hash!=='#/'+id) history.replaceState(null,'','#/'+id); }catch(e){}
@@ -3117,7 +3127,7 @@ function go(id){
 async function boot(){
   let hash='';
   try{ hash=(location.hash||'').replace('#/',''); }catch(e){}
-  S.view = V[hash]? hash : 'dashboard';
+  S.view = (V[hash] && canAccess(hash)) ? hash : 'dashboard';
   S._fresh = !hash;   /* only greet on a genuinely fresh open, not a refresh */
   $('#periodSel').innerHTML=MONTHS.map((m,i)=>`<option value="${i}" ${i===S.month?'selected':''}>${m} ${YEAR()}</option>`).join('');
   $('#searchIcon').innerHTML=icon('search',14);

@@ -214,6 +214,7 @@ const TEAM = [
 const MEM = Object.fromEntries(TEAM.map(t=>[t.id,t]));
 const ME  = TEAM[0] || {id:'',name:'',role:'',dept:''};   /* whoever is signed in */
 const memName = id => (MEM[id]||{name:'Unassigned'}).name;
+const nickOf = id => { const t=MEM[id]; if(!t) return 'Unassigned'; return t.nickname || t.name.split(' ')[0]; };
 
 /* ---- campaigns ---- */
 const CAMPAIGNS = [].map(r=>({id:r[0],name:r[1],objective:r[2],start:r[3],end:r[4],budget:r[5],spent:r[6],revenue:r[7],
@@ -296,7 +297,7 @@ function hydrateTeamRow(r){
     done:0, onTime:100, turn:0, active:0, capacity:cap, allocated:alloc,
     joined:r.joined||'', initials:F.initials(r.name), email:r.email||'', access:r.access||'creator',
     status:r.status||'Active', lastActive:r.last_active||'', load: cap?Math.round(alloc/cap*100):0,
-    restrictedNav:r.restricted_nav||[]};
+    restrictedNav:r.restricted_nav||[], nickname:r.nickname||''};
 }
 function newId(prefix){ return prefix+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,5); }
 function hydrateCampaignRow(r){
@@ -406,7 +407,7 @@ function persistTeam(t){
   if(!sb) return;
   sb.from('team').upsert({id:t.id,name:t.name,role:t.role,dept:t.dept,color:t.color,capacity:t.capacity,
     allocated:t.allocated,joined:t.joined||null,email:t.email,access:t.access,status:t.status,last_active:t.lastActive,
-    restricted_nav:t.restrictedNav||[]})
+    restricted_nav:t.restrictedNav||[], nickname:t.nickname||null})
     .then(({error})=>{ if(error) console.error('team save failed',error); });
 }
 function persistCampaign(c){
@@ -1459,11 +1460,11 @@ V.dashboard = () => {
     actions:`<button class="btn btn-sm" data-go="activity">Full log</button>`,
     body:`<div class="feed">${ACTIVITY.slice(0,7).map(a=>`<div class="feed-item">
       <span class="feed-time">${a.time}</span>${UI.av(a.who)}
-      <span class="feed-line"><b class="w6">${esc(memName(a.who).split(' ')[0])}</b> ${esc(a.what)}
+      <span class="feed-line"><b class="w6">${esc(nickOf(a.who))}</b> ${esc(a.what)}
       ${a.label?`<span class="w5" ${a.ref.startsWith('CNT')?`data-open="content:${a.ref}" style="cursor:pointer;border-bottom:1px solid var(--line-strong)"`:''}>${esc(a.label)}</span>`:''}</span>
     </div>`).join('')}</div>`});
 
-  return pageHead(`${greet}, ${esc(ME.name.split(' ')[0])}`, '',
+  return pageHead(`${greet}, ${esc(nickOf(ME.id))}`, '',
     `<button class="btn" data-act="customise">${icon('layers',14)} Customise</button>${btnPrint}
      <button class="btn btn-primary" data-act="new-content">${icon('plus',14)} New content</button>`)
     + `<div class="stack">
@@ -3804,6 +3805,8 @@ function inviteUserModal(editId){
     body:`<div class="grid g-2">
       <div class="field"><span class="label">Full name</span>
         <input class="input" id="iuName" placeholder="e.g. Maria Santos" style="width:100%" value="${t?esc(t.name):''}"></div>
+      <div class="field"><span class="label">Preferred name (optional)</span>
+        <input class="input" id="iuNick" placeholder="What greetings and the feed call them" style="width:100%" value="${t?esc(t.nickname||''):''}"></div>
       <div class="field"><span class="label">Email</span>
         <input class="input" id="iuEmail" type="email" placeholder="name@atrium.ph" style="width:100%" value="${t?esc(t.email):''}"></div>
       <div class="field"><span class="label">Job title</span>
@@ -3824,7 +3827,7 @@ function saveUser(editId){
   const cap=+($('#iuCap')?$('#iuCap').value:40)||0;
   if(editId){
     const t=MEM[editId]; if(!t) return;
-    Object.assign(t,{name, role:($('#iuTitle')?$('#iuTitle').value.trim():'')||'Team member',
+    Object.assign(t,{name, nickname:($('#iuNick')?$('#iuNick').value.trim():''), role:($('#iuTitle')?$('#iuTitle').value.trim():'')||'Team member',
       dept:$('#iuDept')?$('#iuDept').value:t.dept, email:($('#iuEmail')?$('#iuEmail').value.trim():''),
       capacity:cap, initials:F.initials(name)});
     t.load = t.capacity? Math.round(t.allocated/t.capacity*100):0;
@@ -3837,6 +3840,7 @@ function saveUser(editId){
   const id='tm'+(TEAM.length+1)+Date.now().toString(36).slice(-3);
   const palette=['#3A5A8C','#6A4BC4','#0E7C4F','#9A6700','#C0392B','#2F6E8F','#7A4F2A','#8A3C6B'];
   const t={id, name,
+    nickname: ($('#iuNick')?$('#iuNick').value.trim():''),
     role: ($('#iuTitle')?$('#iuTitle').value.trim():'') || 'Team member',
     dept: $('#iuDept')?$('#iuDept').value:'Production',
     color: palette[TEAM.length % palette.length],
